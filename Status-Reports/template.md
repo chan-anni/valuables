@@ -1,4 +1,4 @@
-#  Valuables YYMMDD Templete
+#  Valuables YYMMDD -- Template
 ** Each section should be answered in bullet points
 
 ## High Level Goal
