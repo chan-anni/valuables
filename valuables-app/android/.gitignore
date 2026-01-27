@@ -1,0 +1,26 @@
+# Android-specific ignores for the Flutter module
+
+# Gradle build directory
+/.gradle
+
+# Capture folders
+/captures/
+
+# Local generated/local config
+/local.properties
+
+# Generated plugin registrant
+GeneratedPluginRegistrant.java
+
+# C/C++ build artifacts
+.cxx/
+
+# Remember to never publicly share your keystore.
+# See https://flutter.dev/docs/deployment/android#signing-the-app
+key.properties
+**/*.keystore
+**/*.jks
+
+# Note: Do NOT ignore the Gradle wrapper scripts or jar here.
+# Keep valuables/android/gradlew, valuables/android/gradlew.bat and
+# valuables/android/gradle/wrapper/gradle-wrapper.jar under version control.
