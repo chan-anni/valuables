@@ -9,3 +9,19 @@ Valuables is a location-based lost and found platform designed to connect item o
 
 For more detailed documentation and requirements, please refer to this document: [Living Document](https://docs.google.com/document/d/13QQbWXSVayHq30wGUSwdVvV63Vgm0ihH9rF6P2hdlEw/edit?usp=sharing)
 
+## Repository Layout
+
+```text
+valuables/
+├── Status-Reports/          # Weekly progress updates
+│
+├── valuables-app/           # Main Flutter application source code
+│   ├── android/             # Android-specific configuration
+│   ├── ios/                 # iOS-specific configuration
+│   ├── lib/                 # Main application logic (Dart code)
+│   ├── test/                # Unit and widget tests
+│   ├── web/                 # Web build configuration
+│   ├── macos/               # macOS build configuration
+│   ├── pubspec.yaml         # Project dependencies and settings            
+│
+└── README.md                # Top-level project overview
