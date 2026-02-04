@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 void main() {
   runApp( MyApp() );
@@ -47,20 +50,25 @@ class MapPage extends StatefulWidget {
 
 // Map needs API key
 class _MapPageState extends State<MapPage> {
-  //final Completer<GoogleMapsController> _controller = Completer<GoogleMapsController>();
+  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+
+  static const CameraPosition startPos = CameraPosition(
+    target: LatLng(47.65428653800135, -122.30802267054545),
+    zoom: 14.4746
+    );
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Map'),);
-    /* return Scaffold(
+    //return const Center(child: Text('Map'),);
+    return Scaffold(
       body: GoogleMap(
-        mapType: MapType.hybrid,
-        initialCameraPosition: _kGooglePlex,
+        mapType: MapType.normal,
+        initialCameraPosition: startPos,
         onMapCreated: (GoogleMapController controller) {
           _controller.complete(controller);
         },
       ),
-    ); */
+    );
   }
 }
 
