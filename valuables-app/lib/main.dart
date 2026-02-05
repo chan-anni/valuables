@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+//import 'marker_icon_generator.dart';
 
 void main() {
   runApp( MyApp() );
@@ -57,6 +58,14 @@ class _MapPageState extends State<MapPage> {
     zoom: 14.4746
     );
 
+    final Set<Marker> _markers = <Marker>{
+      Marker(
+        markerId: MarkerId('1'), 
+        position: LatLng(47.65428653800135, -122.30802267054545)
+        ),
+      Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
+    };
+
   @override
   Widget build(BuildContext context) {
     //return const Center(child: Text('Map'),);
@@ -67,6 +76,7 @@ class _MapPageState extends State<MapPage> {
         onMapCreated: (GoogleMapController controller) {
           _controller.complete(controller);
         },
+        markers: _markers,
       ),
     );
   }
