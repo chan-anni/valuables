@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
-  runApp( MyApp() );
+void main() async {
+  // Supabase Setup
+  await Supabase.initialize(
+    anonKey: "sb_publishable_sbp4gelcpvGhbYNg6i6kqQ_hyht0uCc",
+    url: "https://zhurzsbvxcsaexcbqown.supabase.co",
+  );
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return const MaterialApp(home: Navigation());
   }
-
 }
 
 class Navigation extends StatefulWidget {
@@ -22,11 +27,7 @@ class Navigation extends StatefulWidget {
 }
 
 // Stores and navigates through the different pages with a Widget array.
-final pages = const <Widget>[
-    HomePage(),
-    MapPage(),
-    MessagePage()
-  ];
+final pages = const <Widget>[HomePage(), MapPage(), MessagePage()];
 
 // Each page has their own build function to make things simple
 class HomePage extends StatelessWidget {
@@ -34,7 +35,7 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Home'),);
+    return const Center(child: Text('Home'));
   }
 }
 
@@ -51,7 +52,7 @@ class _MapPageState extends State<MapPage> {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Map'),);
+    return const Center(child: Text('Map'));
     /* return Scaffold(
       body: GoogleMap(
         mapType: MapType.hybrid,
@@ -69,7 +70,7 @@ class MessagePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Messages'),);
+    return const Center(child: Text('Messages'));
   }
 }
 
@@ -81,33 +82,24 @@ class _NavigationState extends State<Navigation> {
     final ThemeData theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-          backgroundColor: Colors.green,
-          title: const Text('Valuables', style: TextStyle(color: Colors.white),),
-        ),
+        backgroundColor: Colors.green,
+        title: const Text('Valuables', style: TextStyle(color: Colors.white)),
+      ),
 
-        bottomNavigationBar: NavigationBar(
-          destinations: const [
-            NavigationDestination(
-              icon: Icon (Icons.home),
-              label: 'Home'
-            ),
-            NavigationDestination(
-              icon: Icon (Icons.map),
-              label: 'Map'
-            ),
-            NavigationDestination(
-              icon: Icon (Icons.message),
-              label: 'Messages'
-            ),
-          ],
-          onDestinationSelected: (int index) {
-            setState(() {
-              currentPageIndex = index;
-            });
-          } ,
-          selectedIndex: currentPageIndex,
-        ),
-        body: pages[currentPageIndex],
+      bottomNavigationBar: NavigationBar(
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.map), label: 'Map'),
+          NavigationDestination(icon: Icon(Icons.message), label: 'Messages'),
+        ],
+        onDestinationSelected: (int index) {
+          setState(() {
+            currentPageIndex = index;
+          });
+        },
+        selectedIndex: currentPageIndex,
+      ),
+      body: pages[currentPageIndex],
     );
   }
 }
