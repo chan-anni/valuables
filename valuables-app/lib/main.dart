@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-//import 'marker_icon_generator.dart';
+import 'package:google_maps_custom_marker/google_maps_custom_marker.dart';
 
 void main() {
   runApp( MyApp() );
@@ -52,23 +52,67 @@ class MapPage extends StatefulWidget {
 // Map needs API key
 class _MapPageState extends State<MapPage> {
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  Future<void>? _addMarkersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _addMarkersFuture = _addMarkers();
+  }
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
     zoom: 14.4746
     );
 
-    final Set<Marker> _markers = <Marker>{
-      Marker(
-        markerId: MarkerId('1'), 
-        position: LatLng(47.65428653800135, -122.30802267054545)
-        ),
-      Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
-    };
+  final Set<Marker> _markers = <Marker>{
+    Marker(
+      markerId: MarkerId('1'), 
+      position: LatLng(46.65428653800135, -122.30802267054545)
+      ),
+    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
+  };
+
+  Future<void> _addMarkers() async {
+
+    Marker pinMarker = await GoogleMapsCustomMarker.createCustomMarker(
+    marker: const Marker(
+        markerId: MarkerId('pin'),
+        position: LatLng(47.68428653900135, -122.30802267054545),
+    ),
+    shape: MarkerShape.pin,
+    pinOptions: PinMarkerOptions(diameter: 20.0)
+  );
+  _markers.add(pinMarker);
+  }
 
   @override
   Widget build(BuildContext context) {
-    //return const Center(child: Text('Map'),);
+    return Scaffold(
+      body: FutureBuilder(
+        future: _addMarkersFuture, 
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                  child:
+                      CircularProgressIndicator()); // Show loading spinner while markers load
+            } else if (snapshot.hasError) {
+              return Center(
+                  child: Text(
+                      'Error: ${snapshot.error}')); // Display error if marker loading fails
+            } else {
+              return GoogleMap(
+                initialCameraPosition: startPos,
+                markers: _markers,
+                onMapCreated: (GoogleMapController controller) {
+                  _controller.complete(controller);
+                },
+              );
+            }
+        }
+        
+        ),
+    );
     return Scaffold(
       body: GoogleMap(
         mapType: MapType.normal,
