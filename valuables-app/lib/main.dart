@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_custom_marker/google_maps_custom_marker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
-  // Supabase Setup
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await dotenv.load(fileName: ".env");
+  
   await Supabase.initialize(
-    anonKey: "sb_publishable_sbp4gelcpvGhbYNg6i6kqQ_hyht0uCc",
-    url: "https://zhurzsbvxcsaexcbqown.supabase.co",
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  
   runApp(MyApp());
 }
 
@@ -114,16 +119,16 @@ class _MapPageState extends State<MapPage> {
         
         ),
     );
-    return Scaffold(
-      body: GoogleMap(
-        mapType: MapType.normal,
-        initialCameraPosition: startPos,
-        onMapCreated: (GoogleMapController controller) {
-          _controller.complete(controller);
-        },
-        markers: _markers,
-      ),
-    );
+    // return Scaffold(
+    //   body: GoogleMap(
+    //     mapType: MapType.normal,
+    //     initialCameraPosition: startPos,
+    //     onMapCreated: (GoogleMapController controller) {
+    //       _controller.complete(controller);
+    //     },
+    //     markers: _markers,
+    //   ),
+    // );
   }
 }
 
