@@ -6,6 +6,8 @@ import 'package:google_maps_custom_marker/google_maps_custom_marker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+// importing the lost item forms
+import 'screens/lost_item_form.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -24,7 +26,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: Navigation());
+    return MaterialApp(
+    theme: ThemeData(
+      primarySwatch: Colors.green,
+      useMaterial3: true,
+    ), 
+    home: const Navigation(),
+    );
   }
 }
 
@@ -38,13 +46,44 @@ class Navigation extends StatefulWidget {
 // Stores and navigates through the different pages with a Widget array.
 final pages = const <Widget>[HomePage(), MapPage(), MessagePage()];
 
-// Each page has their own build function to make things simple
+
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Home'));
+        return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Valuables',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'idk the ui plans [placeholder text]',
+          ),
+          const SizedBox(height: 40),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LostItemForm()),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Report Lost/Found Item'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -55,7 +94,9 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-// Map needs API key
+
+
+// Map page -- needs API key
 class _MapPageState extends State<MapPage> {
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   Future<void>? _addMarkersFuture;
@@ -119,18 +160,10 @@ class _MapPageState extends State<MapPage> {
         
         ),
     );
-    // return Scaffold(
-    //   body: GoogleMap(
-    //     mapType: MapType.normal,
-    //     initialCameraPosition: startPos,
-    //     onMapCreated: (GoogleMapController controller) {
-    //       _controller.complete(controller);
-    //     },
-    //     markers: _markers,
-    //   ),
-    // );
   }
 }
+
+
 
 class MessagePage extends StatelessWidget {
   const MessagePage({super.key});
