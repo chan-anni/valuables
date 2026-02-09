@@ -11,14 +11,18 @@ class LostItemForm extends StatefulWidget {
   _LostItemFormState createState() => _LostItemFormState();
 }
 
+
 class _LostItemFormState extends State<LostItemForm> {
   final _formKey = GlobalKey<FormState>();
   final _supabase = Supabase.instance.client;
   
+  
   // Form controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  
+  bool _showMap = false; // controls whether to show the map for location selection
+  final _addressController = TextEditingController(); // controller for manual address input if user doesn't want to use map
+
   // Form values
   String _selectedType = 'lost';
   String? _selectedCategory;
