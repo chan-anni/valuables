@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_custom_marker/google_maps_custom_marker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -13,8 +12,8 @@ Future<void> main() async {
   await dotenv.load(fileName: ".env");
   
   await Supabase.initialize(
-    url: dotenv.env['supabaseURL']!,
-    anonKey: dotenv.env['supabaseAnonKey']!,
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
   
   runApp(MyApp());
@@ -111,6 +110,7 @@ class _MapPageState extends State<MapPage> {
     zoom: 14.4746
     );
 
+  // Test dummy markers
   final Set<Marker> _markers = <Marker>{
     Marker(
       markerId: MarkerId('1'), 
@@ -121,15 +121,17 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _addMarkers() async {
 
-    Marker pinMarker = await GoogleMapsCustomMarker.createCustomMarker(
-    marker: const Marker(
-        markerId: MarkerId('pin'),
-        position: LatLng(47.68428653900135, -122.30802267054545),
-    ),
-    shape: MarkerShape.pin,
-    pinOptions: PinMarkerOptions(diameter: 20.0)
-  );
-  _markers.add(pinMarker);
+    final data = await Supabase.instance.client
+    .from('items')
+    .select();
+
+    for (var item in data) {
+      Marker newMarker = Marker(
+        markerId: MarkerId(item['id']),
+        position: LatLng(item['location_lat'], item['location_lng'])
+        );
+        _markers.add(newMarker);
+    }
   }
 
   @override
