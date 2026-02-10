@@ -8,7 +8,7 @@ class LostItemForm extends StatefulWidget {
   const LostItemForm({super.key});
 
   @override
-  _LostItemFormState createState() => _LostItemFormState();
+  State<LostItemForm> createState() => _LostItemFormState();
 }
 
 
@@ -20,8 +20,7 @@ class _LostItemFormState extends State<LostItemForm> {
   // Form controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  bool _showMap = false; // controls whether to show the map for location selection
-  final _addressController = TextEditingController(); // controller for manual address input if user doesn't want to use map
+
 
   // Form values
   String _selectedType = 'lost';
@@ -374,7 +373,15 @@ class _LostItemFormState extends State<LostItemForm> {
       
       return imageUrl;
     } catch (e) {
-      print('Error uploading image: $e');
+      // return a snackbar error message instead of returning null
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading image: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return null;
     }
   }
@@ -406,9 +413,7 @@ class _LostItemFormState extends State<LostItemForm> {
       
       // Upload image if selected
       if (_imageFile != null) {
-        print('Uploading image...');
         _imageUrl = await _uploadImage();
-        print('Image URL: $_imageUrl');
       }
       
       final data = {
@@ -426,27 +431,7 @@ class _LostItemFormState extends State<LostItemForm> {
         'status': 'active',
       };
 
-      print("data to insert: $data");
-
-      final response = await _supabase.from('items').insert(data).select();
-
-      print("Insert response: $response");
-
-      // // Insert into database
-      // await _supabase.from('items').insert({
-      //   'user_id': userId,
-      //   'type': _selectedType,
-      //   'title': _titleController.text.trim(),
-      //   'description': _descriptionController.text.trim(),
-      //   'category': _selectedCategory,
-      //   'location_lat': _locationLat,
-      //   'location_lng': _locationLng,
-      //   'location_name': _locationName,
-      //   'image_url': _imageUrl,
-      //   'date_lost': _selectedType == 'lost' ? _dateLost?.toIso8601String() : null,
-      //   'date_found': _selectedType == 'found' ? _dateFound?.toIso8601String() : null,
-      //   'status': 'active',
-      // });
+      await _supabase.from('items').insert(data).select();
       
       if (mounted) {
         Navigator.pop(context);
