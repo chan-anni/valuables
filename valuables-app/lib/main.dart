@@ -110,14 +110,7 @@ class _MapPageState extends State<MapPage> {
     zoom: 14.4746
     );
 
-  // Test dummy markers
-  final Set<Marker> _markers = <Marker>{
-    Marker(
-      markerId: MarkerId('1'), 
-      position: LatLng(46.65428653800135, -122.30802267054545)
-      ),
-    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
-  };
+  final Set<Marker> _markers = {};
 
   Future<void> _addMarkers() async {
 
@@ -128,8 +121,35 @@ class _MapPageState extends State<MapPage> {
     for (var item in data) {
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
-        position: LatLng(item['location_lat'], item['location_lng'])
-        );
+        position: LatLng(item['location_lat'], item['location_lng']),
+        onTap: () {
+          showModalBottomSheet(context: context, 
+          builder: (BuildContext context){
+            return SizedBox.expand(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(item['title'],
+                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 2.0),
+                        textAlign: TextAlign.left,
+                        ),
+                        Image.network(item['image_url'], height: 200, width: 200),
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text(item['description'], ),
+                        ),
+                        ElevatedButton(
+                          child: const Text('Close'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  );
+          }
+          );
+        }
+      );
         _markers.add(newMarker);
     }
   }
