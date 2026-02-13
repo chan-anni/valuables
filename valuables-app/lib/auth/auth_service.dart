@@ -4,6 +4,7 @@
 library;
 
 import "package:supabase_flutter/supabase_flutter.dart";
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
