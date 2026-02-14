@@ -8,7 +8,6 @@
 .history
 .env
 
-
 # Flutter repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat
@@ -86,6 +85,7 @@ unlinked_spec.ds
 **/ios/Flutter/flutter_export_environment.sh
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
+**ios/Runner/AppDelegate.swift
 
 # macOS
 **/Flutter/ephemeral/
@@ -93,6 +93,10 @@ unlinked_spec.ds
 **/macos/Flutter/GeneratedPluginRegistrant.swift
 **/macos/Flutter/ephemeral
 **/xcuserdata/
+**/macos/Flutter/Flutter-Debug.xcconfig
+**/macos/Flutter/Flutter-Release.xcconfig
+**/macos/Flutter/Flutter-Profile.xcconfig
+
 
 # Windows
 **/windows/flutter/generated_plugin_registrant.cc
@@ -117,3 +121,54 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+
+# IntelliJ related
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Environment variables
+.env
+valuables-app/ios/Runner/AppDelegate.swift
+
+# commonly generated files
+*~
+.*.sw?
+.DS_Store
+.ccls-cache
+.cache
+.classpath
+.clangd/
+.cproject
+.dart_tool
+.gdb_history
+.checkstyle
+.gdbinit
+.landmines
+.project
+.pub
+.pydevproject
+compile_commands.json
+cscope.*
+Session.vim
+tags
+Thumbs.db
+.idea
+pubspec.lock
+.vscode/
+docs/doxygen/
+xcuserdata
+third_party/gn/
+
+# Miscellaneous
+.atom/
+.svn/
+
+# Visual Studio Code related
+.settings/
+
+# Flutter/Dart/Pub related
+.pub-cache/
+# Android related
+**/android/.gradle

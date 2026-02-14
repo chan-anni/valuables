@@ -1,15 +1,22 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_gate.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
-  // Supabase Setup
+// importing the lost item forms
+import 'screens/lost_item_form.dart';
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await dotenv.load(fileName: ".env");
+  
   await Supabase.initialize(
-    anonKey: "sb_publishable_sbp4gelcpvGhbYNg6i6kqQ_hyht0uCc",
-    url: "https://zhurzsbvxcsaexcbqown.supabase.co",
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  
   runApp(MyApp());
 }
 
@@ -20,7 +27,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: MapPage());
+    return MaterialApp(
+    theme: ThemeData(
+      primarySwatch: Colors.green,
+      useMaterial3: true,
+    ), 
+    home: const Navigation(),
+    );
   }
 }
 
@@ -34,14 +47,44 @@ class Navigation extends StatefulWidget {
 // Stores and navigates through the different pages with a Widget array.
 final pages = const <Widget>[HomePage(), MapPage(), MessagePage()];
 
-// Each page has their own build function to make things simple
+
+
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    return Scaffold(body: Center(child: Text("hello world")));
+        return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Valuables',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'idk the ui plans [placeholder text]',
+          ),
+          const SizedBox(height: 40),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const LostItemForm()),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Report Lost/Found Item'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -52,24 +95,79 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-// Map needs API key
+
+
+// Map page -- needs API key
 class _MapPageState extends State<MapPage> {
-  //final Completer<GoogleMapsController> _controller = Completer<GoogleMapsController>();
+  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  Future<void>? _addMarkersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _addMarkersFuture = _addMarkers();
+  }
+
+  static const CameraPosition startPos = CameraPosition(
+    target: LatLng(47.65428653800135, -122.30802267054545),
+    zoom: 14.4746
+    );
+
+  // Test dummy markers
+  final Set<Marker> _markers = <Marker>{
+    Marker(
+      markerId: MarkerId('1'), 
+      position: LatLng(46.65428653800135, -122.30802267054545)
+      ),
+    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
+  };
+
+  Future<void> _addMarkers() async {
+
+    final data = await Supabase.instance.client
+    .from('items')
+    .select();
+
+    for (var item in data) {
+      Marker newMarker = Marker(
+        markerId: MarkerId(item['id']),
+        position: LatLng(item['location_lat'], item['location_lng'])
+        );
+        _markers.add(newMarker);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: Text('Map'));
-    /* return Scaffold(
-      body: GoogleMap(
-        mapType: MapType.hybrid,
-        initialCameraPosition: _kGooglePlex,
-        onMapCreated: (GoogleMapController controller) {
-          _controller.complete(controller);
-        },
-      ),
-    ); */
+    return Scaffold(
+      body: FutureBuilder(
+        future: _addMarkersFuture, 
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                  child:
+                      CircularProgressIndicator()); // Show loading spinner while markers load
+            } else if (snapshot.hasError) {
+              return Center(
+                  child: Text(
+                      'Error: ${snapshot.error}')); // Display error if marker loading fails
+            } else {
+              return GoogleMap(
+                initialCameraPosition: startPos,
+                markers: _markers,
+                onMapCreated: (GoogleMapController controller) {
+                  _controller.complete(controller);
+                },
+              );
+            }
+        }
+        
+        ),
+    );
   }
 }
+
+
 
 class MessagePage extends StatelessWidget {
   const MessagePage({super.key});
@@ -85,7 +183,6 @@ class _NavigationState extends State<Navigation> {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.green,
