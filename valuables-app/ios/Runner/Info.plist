@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Use your location to recieve reports of found items nearby</string>
+
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your location to help you report lost/found items</string> 
 </dict>
 </plist>
