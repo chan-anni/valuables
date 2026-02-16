@@ -593,14 +593,14 @@ class _SettingsTabState extends State<_SettingsTab> {
             const SizedBox(height: 24),
             Center(
               child: TextButton(
-                onPressed: () async {
-                  await _supabase.auth.signOut();
-                  if (mounted) {
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  }
-                },
-                child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-              ),
+                  onPressed: () async {
+                    final navigator = Navigator.of(context);
+                    await _supabase.auth.signOut();
+                    if (!mounted) return;
+                    navigator.popUntil((route) => route.isFirst);
+                  },
+                  child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                ),
             ),
           ],
         ),
@@ -622,6 +622,7 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _foundReports = [];
   String _searchQuery = '';
   bool _isLoading = true;
+  String? _historyError;
 
   @override
   void initState() {
@@ -660,8 +661,10 @@ class _HistoryPageState extends State<HistoryPage> {
         setState(() => _isLoading = false);
       }
     } catch (e) {
-      print('Error loading history: $e');
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _historyError = 'Failed to load activity: ${e.toString()}';
+      });
     }
   }
 
@@ -699,38 +702,64 @@ class _HistoryPageState extends State<HistoryPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: 'Search your reports...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    if (_historyError != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          border: Border.all(color: Colors.red.shade200),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _historyError!,
+                                style: TextStyle(color: Colors.red.shade800),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 20, color: Colors.red),
+                              onPressed: () => setState(() => _historyError = null),
+                              padding: EdgeInsets.zero,
+                            ),
+                          ],
+                        ),
+                      ),
+                    TextField(
+                      onChanged: (value) => setState(() => _searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search your reports...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Lost Reports Section
-                  _buildHistorySection(
-                    title: 'Lost Reports',
-                    subtitle: 'Items not yet found at bottom',
-                    icon: Icons.search,
-                    color: Colors.red,
-                    items: _filterItems(_lostReports),
-                    allowDelete: true,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Found Reports Section
-                  _buildHistorySection(
-                    title: 'Found Reports',
-                    subtitle: 'Items not yet claimed at bottom',
-                    icon: Icons.check_circle,
-                    color: Colors.green,
-                    items: _filterItems(_foundReports),
-                    allowDelete: false,
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    // Lost Reports Section
+                    _buildHistorySection(
+                      title: 'Lost Reports',
+                      subtitle: 'Items not yet found at bottom',
+                      icon: Icons.search,
+                      color: Colors.red,
+                      items: _filterItems(_lostReports),
+                      allowDelete: true,
+                    ),
+                    const SizedBox(height: 24),
+                    // Found Reports Section
+                    _buildHistorySection(
+                      title: 'Found Reports',
+                      subtitle: 'Items not yet claimed at bottom',
+                      icon: Icons.check_circle,
+                      color: Colors.green,
+                      items: _filterItems(_foundReports),
+                      allowDelete: false,
+                    ),
+                  ],
+                ),
               ),
             ),
           )
