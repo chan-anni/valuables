@@ -45,9 +45,7 @@ class Navigation extends StatefulWidget {
 }
 
 // Stores and navigates through the different pages with a Widget array.
-final pages = const <Widget>[HomePage(), MapPage(), MessagePage()];
-
-
+final pages = const <Widget>[HomePage(), MapPage(), MessagePage(), AuthGate()];
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -194,6 +192,7 @@ class _NavigationState extends State<Navigation> {
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.map), label: 'Map'),
           NavigationDestination(icon: Icon(Icons.message), label: 'Messages'),
+          NavigationDestination(icon: Icon(Icons.account_circle), label: 'Profile'),
         ],
         onDestinationSelected: (int index) {
           setState(() {
