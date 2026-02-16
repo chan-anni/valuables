@@ -17,6 +17,7 @@ class _HomePageState extends State<HomePage> {
   List<dynamic> _alertItems = [];
   bool _isLoading = true;
   bool _itemsExpanded = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -49,7 +50,9 @@ class _HomePageState extends State<HomePage> {
         _recentItems = unclaimedItems;
       });
     } catch (e) {
-      print('Error loading recent items: $e');
+      setState(() {
+        _recentItems = [];
+      });
     }
   }
 
@@ -103,11 +106,13 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _alertItems = items;
         _isLoading = false;
+        _errorMessage = null;
       });
     } catch (e) {
-      print('Error loading alerts: $e');
       setState(() {
+        _alertItems = [];
         _isLoading = false;
+        _errorMessage = 'Failed to load alerts: ${e.toString()}';
       });
     }
   }
@@ -204,6 +209,35 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Error banner
+              if (_errorMessage != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    border: Border.all(color: Colors.red.shade200),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(color: Colors.red.shade800),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20, color: Colors.red),
+                        onPressed: () => setState(() => _errorMessage = null),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+
               // Profile Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

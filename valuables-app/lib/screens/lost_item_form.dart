@@ -286,8 +286,8 @@ class _LostItemFormState extends State<LostItemForm> {
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now(),
     );
-    
     if (date != null) {
+      if (!mounted) return;
       setState(() {
         if (_selectedType == 'lost') {
           _dateLost = date;
@@ -350,6 +350,7 @@ class _LostItemFormState extends State<LostItemForm> {
     );
     
     if (pickedFile != null) {
+      if (!mounted) return;
       setState(() {
         _imageFile = File(pickedFile.path);
       });
