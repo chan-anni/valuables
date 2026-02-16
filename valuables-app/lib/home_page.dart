@@ -53,6 +53,11 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _recentItems = [];
       });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load recent items: $e')),
+        );
+      }
     }
   }
 
