@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'map_picker_screen.dart';
 
 class LostItemForm extends StatefulWidget {
   final SupabaseClient? supabaseClient;
@@ -305,20 +306,24 @@ class _LostItemFormState extends State<LostItemForm> {
   }
 
   Future<void> _pickLocation() async {
-    // TODO: Navigate to map screen for location selection
-    // For now, set a default location
+  final result = await Navigator.push<MapPickerResult>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MapPickerScreen(
+        initialLat: _locationLat,
+        initialLng: _locationLng,
+      ),
+    ),
+  );
+
+  if (result != null) {
     setState(() {
-      _locationLat = 47.65428653800135;
-      _locationLng = -122.30802267054545;
-      _locationName = 'Mirrormont, WA';
+      _locationLat = result.lat;
+      _locationLng = result.lng;
+      _locationName = result.locationName;
     });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Map selection coming soon! Using default location.')),
-      );
-    }
   }
+}
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
