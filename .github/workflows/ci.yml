@@ -47,7 +47,7 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: /coverage/lcov.info
+          files: valuables-app/coverage/lcov.info
 
   # build:
   #   name: Build & Release
