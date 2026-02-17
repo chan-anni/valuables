@@ -119,7 +119,7 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml:
 </manifest>
 
 ```
-####iOS
+### iOS
 Add to ios/Runner/AppDelegate.swift before GeneratedPluginRegistrant.register:
 ```js
 swiftimport GoogleMaps
