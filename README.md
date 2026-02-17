@@ -22,9 +22,9 @@ valuables/
 │   ├── android/             # Android-specific configuration
 │   ├── ios/                 # iOS-specific configuration
 │   ├── lib/                 # Main application logic (Dart code)
-|       ├── screens/         # Individual screens (form, map, etc.)
+|   |    ├── screens/         # Individual screens (form, map, etc.)
 │   ├── test/                # Unit and widget tests
-|       ├── screens/         # Specific tests for individual screens (form screen, map, etc.)
+|   |    ├── screens/         # Specific tests for individual screens (form screen, map, etc.)
 │   ├── web/                 # Web build configuration
 │   ├── macos/               # macOS build configuration
 │   ├── pubspec.yaml         # Project dependencies and settings            
@@ -37,8 +37,9 @@ valuables/
 * [Prerequisites](#prerequisites)
 * [Environment Setup](#environment-setup)
 * [Repo Setup](#repo-setup)
-    * [iOS Configuration](#ios)
+    * [iOS Configuration](#iOS)
     * [Android Configuration](#android)
+* [Running the App](#running-the-app)
 * [Testing](#testing)
 * [CI/CD & Coverage](#ci)
 
@@ -50,12 +51,12 @@ Install Flutter from the official docs: https://docs.flutter.dev/get-started/ins
 
 This project requires:
 
-|      Tool      | Required Version |
-|      ----      | ---------------- |
-|    Dart SKD    | ^3.10.7          |
-| Flutter  |          ---   |
-|XCode (ios/macOS|   15.0+|
-|CocoaPods (ios/macOS) | 1.14.0+|
+|      Tool            | Required Version |
+|----------------------|------------------|
+|Dart SDK              |           ^3.10.7|
+|Flutter               |               ---|
+|XCode (ios/macOS      |             15.0+|
+|CocoaPods (ios/macOS) |           1.14.0+|
 
 After installing flutter, you can verify your environment is healthy using
 ```
@@ -77,7 +78,7 @@ Google Maps — platform-level key registration
 google_maps_flutter requires the API key to be registered natively on each platform, in addition to .env.
 #### Android
 Add inside <application> in android/app/src/main/AndroidManifest.xml:
-```js
+```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:label="valuables"
@@ -120,11 +121,9 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml:
 
 ```
 ### iOS
-Add to ios/Runner/AppDelegate.swift before GeneratedPluginRegistrant.register:
-```js
-swiftimport GoogleMaps
+Add/Create ios/Runner/AppDelegate.swift
+```swift
 
-// Inside application(_:didFinishLaunchingWithOptions:):
 import UIKit
 import Flutter
 import GoogleMaps
