@@ -39,29 +39,12 @@ class AuthService {
   }
 
   Future<AuthResponse> signInWithGoogle() async {
-    const webClientId =
-        '398491837853-hvd35lt2rgjb0g4ui20ft8kqg0oa4bmm.apps.googleusercontent.com';
-
-    const iosClientId =
-        '398491837853-k279v0djfia5g0s9itnnnbumo2a24aab.apps.googleusercontent.com';
-
     // Google sign in on Android will work without providing the Android
     // Client ID registered on Google Cloud.
 
-    final GoogleSignIn signIn = GoogleSignIn.instance;
-
-    // At the start of your app, initialize the GoogleSignIn instance
-    unawaited(
-      signIn.initialize(clientId: iosClientId, serverClientId: webClientId),
-    );
-
     // Perform the sign in
-    final googleAccount = await signIn.authenticate();
-    final googleAuthorization = await googleAccount.authorizationClient
-        .authorizationForScopes([]);
-    final googleAuthentication = googleAccount.authentication;
-    final idToken = googleAuthentication.idToken;
-    final accessToken = googleAuthorization?.accessToken;
+    final googleAccount = await GoogleSignIn.instance.authenticate();
+    final idToken = googleAccount.authentication.idToken;
 
     if (idToken == null) {
       throw 'No ID Token found.';
@@ -70,7 +53,6 @@ class AuthService {
     return await _supabase.auth.signInWithIdToken(
       provider: OAuthProvider.google,
       idToken: idToken,
-      accessToken: accessToken,
     );
   }
 

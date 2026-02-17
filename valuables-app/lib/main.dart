@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import "package:google_sign_in/google_sign_in.dart";
 
 // importing the lost item forms
 import 'screens/lost_item_form.dart';
@@ -15,6 +16,13 @@ Future<void> main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
+  await GoogleSignIn.instance.initialize(
+    clientId: 
+        '398491837853-k279v0djfia5g0s9itnnnbumo2a24aab.apps.googleusercontent.com',
+    serverClientId: 
+        '398491837853-hvd35lt2rgjb0g4ui20ft8kqg0oa4bmm.apps.googleusercontent.com',
   );
   
   runApp(MyApp());
