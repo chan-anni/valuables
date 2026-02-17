@@ -363,7 +363,14 @@ class _LostItemFormState extends State<LostItemForm> {
   }
 
   Future<String?> _uploadImage() async {
-    if (_imageFile == null || _supabase == null) return null;
+    if (_supabase == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error connecting to database'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
     
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
