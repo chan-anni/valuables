@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 
+// Trivial comment to test the code coverage comments setup
 class HomePage extends StatefulWidget {
   final VoidCallback? onBrowsePressed;
   
