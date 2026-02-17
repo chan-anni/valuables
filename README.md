@@ -13,15 +13,24 @@ For more detailed documentation and requirements, please refer to this document:
 
 ```text
 valuables/
+├── .github/workflows        # CI workflow 
 ├── Status-Reports/          # Weekly progress updates
 │
 ├── valuables-app/           # Main Flutter application source code
 │   ├── android/             # Android-specific configuration
 │   ├── ios/                 # iOS-specific configuration
 │   ├── lib/                 # Main application logic (Dart code)
+|       ├── screens/         # Individual screens (form, map, etc.)
 │   ├── test/                # Unit and widget tests
+|       ├── screens/         # Specific tests for individual screens (form screen, map, etc.)
 │   ├── web/                 # Web build configuration
 │   ├── macos/               # macOS build configuration
 │   ├── pubspec.yaml         # Project dependencies and settings            
 │
 └── README.md                # Top-level project overview
+
+```
+## Quickstart Guide
+Our main code lies in the 'developing' branch, while code for releases will be pulled in from 'developing' to 'main'.
+
+To start, 
