@@ -53,6 +53,7 @@ class _LoginPageState extends State<LoginPage> {
               child: Text("Don't have an account, sign up today!"),
             ),
           ),
+          ElevatedButton(onPressed: authService.signInWithGoogle, child: const Text("Login with Google")),
         ],
       ),
     );
