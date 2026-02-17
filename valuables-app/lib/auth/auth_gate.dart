@@ -8,12 +8,30 @@ import 'package:valuables/pages/login_page.dart';
 import 'package:valuables/pages/profile_page.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+  /// Optional stream to override the default Supabase auth state stream.
+  /// When null, defaults to Supabase.instance.client.auth.onAuthStateChange.
+  /// Pass a custom stream in tests to avoid requiring a live Supabase instance.
+  final Stream<AuthState>? authStateStream;
+
+  /// Optional widget overrides for the logged-in and logged-out states.
+  /// When null, defaults to ProfilePage and LoginPage respectively.
+  /// Pass lightweight stub widgets in tests to avoid Supabase dependencies
+  /// that live inside the real page widgets.
+  final Widget? loggedInWidget;
+  final Widget? loggedOutWidget;
+
+  const AuthGate({
+    super.key,
+    this.authStateStream,
+    this.loggedInWidget,
+    this.loggedOutWidget,
+  });
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: Supabase.instance.client.auth.onAuthStateChange,
+      stream: authStateStream ??
+          Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -23,9 +41,9 @@ class AuthGate extends StatelessWidget {
         final session = snapshot.hasData ? snapshot.data!.session : null;
 
         if (session != null) {
-          return const ProfilePage();
+          return loggedInWidget ?? const ProfilePage();
         } else {
-          return const LoginPage();
+          return loggedOutWidget ?? const LoginPage();
         }
       },
     );
