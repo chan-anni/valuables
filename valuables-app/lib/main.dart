@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:valuables/auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // importing the lost item forms
