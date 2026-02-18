@@ -971,53 +971,48 @@ class _MapPageState extends State<MapPage> {
           showModalBottomSheet(context: context, 
           builder: (BuildContext context){
             return SizedBox.expand(
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                children: <Widget>[
-                                  Text(item['title'],
-                                  style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                                  textAlign: TextAlign.left,
-                                  ),
-                                ],
-                              ),
-                              ElevatedButton(
-                                child: Icon(Icons.close),
-                                onPressed: () => Navigator.pop(context),
-                              ),
-                            ],
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(item['title'],
+                          style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
+                          textAlign: TextAlign.left,
                           ),
-                        ),
-                        Image.network(item['image_url'], height: 200, width: 200),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Text(item['description']),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const LostItemForm()),
-                            );
-                          },
-                          icon: const Icon(Icons.add),
-                          label: const Text('Submit Claim'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
+                          ElevatedButton(
+                            child: Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
                           ),
-                        ),
-
-                      ],
+                        ],
+                      ),
                     ),
-                  );
-          }
+                    Image.network(item['image_url'], height: 200, width: 200),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(item['description']),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LostItemForm()),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Submit Claim'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
           );
         }
       );
