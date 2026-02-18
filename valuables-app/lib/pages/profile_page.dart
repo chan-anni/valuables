@@ -16,16 +16,17 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final curretEmail = authService.getCurrentUserEmail();
+    final currentEmail = authService.getCurrentUserEmail();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile"),
-        actions: [
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(currentEmail.toString()),
+          const SizedBox(height: 16),
           IconButton(onPressed: logout, icon: const Icon(Icons.logout)),
         ],
       ),
-      body: Center(child: Text(curretEmail.toString())),
     );
   }
 }

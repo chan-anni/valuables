@@ -47,7 +47,7 @@ class AuthService {
     final idToken = googleAccount.authentication.idToken;
 
     if (idToken == null) {
-      throw 'No ID Token found.';
+      throw Exception('No ID Token found.');
     }
 
     return await _supabase.auth.signInWithIdToken(
