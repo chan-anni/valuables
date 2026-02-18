@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'home_page.dart';
+import 'package:valuables/screens/lost_item_form.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
