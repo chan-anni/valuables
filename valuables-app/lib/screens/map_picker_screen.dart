@@ -68,6 +68,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     _searchController.dispose();
     _mapController?.dispose();
     super.dispose();
+    _debounceTimer?.cancel();
   }
 
   // Deals with fetching the user's current location, checking 
@@ -338,7 +339,6 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   ),
                 ),
 
-                // Search results dropdown
                 // Search results dropdown
                 if (_searchResults.isNotEmpty)
                   Material(
