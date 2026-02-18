@@ -955,14 +955,7 @@ class _MapPageState extends State<MapPage> {
     zoom: 14.4746
     );
 
-  // Test dummy markers
-  final Set<Marker> _markers = <Marker>{
-    Marker(
-      markerId: MarkerId('1'), 
-      position: LatLng(46.65428653800135, -122.30802267054545)
-      ),
-    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
-  };
+  final Set<Marker> _markers = {};
 
   Future<void> _addMarkers() async {
 
