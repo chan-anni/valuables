@@ -18,16 +18,14 @@ Future<void> main() async {
   );
 
   await GoogleSignIn.instance.initialize(
-    clientId: 
-        '398491837853-k279v0djfia5g0s9itnnnbumo2a24aab.apps.googleusercontent.com',
-    serverClientId: 
-        '398491837853-hvd35lt2rgjb0g4ui20ft8kqg0oa4bmm.apps.googleusercontent.com',
+    clientId: dotenv.env['GOOGLE_CLIENT_ID']!,
+    serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID']!,
   );
   
   runApp(MyApp());
 }
 
-final supabase = Supabase.instance.client;
+final _supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -100,7 +98,6 @@ class AccountPage extends StatefulWidget {
 }
 
 class _AccountPageState extends State<AccountPage> {
-  final _supabase = Supabase.instance.client;
   bool _isLoggedIn = false;
 
   @override
@@ -142,7 +139,6 @@ class _AccountInfoTab extends StatefulWidget {
 }
 
 class _AccountInfoTabState extends State<_AccountInfoTab> {
-  final _supabase = Supabase.instance.client;
   late TextEditingController _nameController;
   late TextEditingController _usernameController;
   bool _isEditing = false;
@@ -366,7 +362,6 @@ class _LoginForm extends StatefulWidget {
 class _LoginFormState extends State<_LoginForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _supabase = Supabase.instance.client;
   bool _isLoading = false;
 
   Future<void> _login() async {
@@ -452,7 +447,6 @@ class _SignUpFormState extends State<_SignUpForm> {
   final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _supabase = Supabase.instance.client;
   bool _isLoading = false;
 
   Future<void> _signup() async {
@@ -560,7 +554,6 @@ class _SettingsTab extends StatefulWidget {
 }
 
 class _SettingsTabState extends State<_SettingsTab> {
-  final _supabase = Supabase.instance.client;
   bool _notificationsEnabled = true;
   bool _privacyEnabled = true;
 
@@ -631,7 +624,6 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final _supabase = Supabase.instance.client;
   List<dynamic> _lostReports = [];
   List<dynamic> _foundReports = [];
   String _searchQuery = '';
@@ -980,7 +972,7 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _addMarkers() async {
 
-    final data = await Supabase.instance.client
+    final data = await _supabase
     .from('items')
     .select();
 
