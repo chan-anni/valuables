@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'map_picker_screen.dart';
 
 class LostItemForm extends StatefulWidget {
   final SupabaseClient? supabaseClient;
@@ -305,20 +306,24 @@ class _LostItemFormState extends State<LostItemForm> {
   }
 
   Future<void> _pickLocation() async {
-    // TODO: Navigate to map screen for location selection
-    // For now, set a default location
+  final result = await Navigator.push<MapPickerResult>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MapPickerScreen(
+        initialLat: _locationLat,
+        initialLng: _locationLng,
+      ),
+    ),
+  );
+
+  if (result != null) {
     setState(() {
-      _locationLat = 47.65428653800135;
-      _locationLng = -122.30802267054545;
-      _locationName = 'Mirrormont, WA';
+      _locationLat = result.lat;
+      _locationLng = result.lng;
+      _locationName = result.locationName;
     });
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Map selection coming soon! Using default location.')),
-      );
-    }
   }
+}
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -377,13 +382,9 @@ class _LostItemFormState extends State<LostItemForm> {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'items/$fileName';
       
-      await _supabase!.storage
-          .from('items')
-          .upload(path, _imageFile!);
+      await _supabase!.storage.from('items').upload(path, _imageFile!);
       
-      final imageUrl = _supabase!.storage
-          .from('items')
-          .getPublicUrl(path);
+      final imageUrl = _supabase!.storage.from('items').getPublicUrl(path);
       
       return imageUrl;
     } catch (e) {
@@ -409,9 +410,9 @@ class _LostItemFormState extends State<LostItemForm> {
     if ((_selectedType == 'lost' && _dateLost == null) ||
         (_selectedType == 'found' && _dateFound == null)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select a date')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Please select a date')));
       }
       return;
     }
@@ -457,8 +458,12 @@ class _LostItemFormState extends State<LostItemForm> {
         'location_lng': _locationLng,
         'location_name': _locationName,
         'image_url': _imageUrl,
-        'date_lost': _selectedType == 'lost' ? _dateLost?.toIso8601String() : null,
-        'date_found': _selectedType == 'found' ? _dateFound?.toIso8601String() : null,
+        'date_lost': _selectedType == 'lost'
+            ? _dateLost?.toIso8601String()
+            : null,
+        'date_found': _selectedType == 'found'
+            ? _dateFound?.toIso8601String()
+            : null,
         'status': 'active',
       };
 
@@ -499,4 +504,3 @@ class _LostItemFormState extends State<LostItemForm> {
     super.dispose();
   }
 }
-
