@@ -40,8 +40,14 @@ jobs:
       - name: Analyze code
         run: flutter analyze
 
-      - name: Run tests
-        run: flutter test
+      - name: Run Tests and Generate Coverage
+        run: flutter test --coverage
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: valuables-app/coverage/lcov.info
 
   # build:
   #   name: Build & Release
