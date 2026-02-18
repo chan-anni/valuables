@@ -19,7 +19,25 @@ class _LoginPageState extends State<LoginPage> {
   // Password input field controller
   final _passwordController = TextEditingController();
 
-  /// Attempt to login with personal email
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void loginWithGoogle() async {
+    try {
+      await authService.signInWithGoogle();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $err")));
+      }
+    }
+  }
+
   void login() async {
     final email = _emailController.text;
     final password = _passwordController.text;
@@ -38,7 +56,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Login")),
       body: ListView(
         children: [
           TextField(controller: _emailController),
@@ -53,7 +70,10 @@ class _LoginPageState extends State<LoginPage> {
               child: Text("Don't have an account, sign up today!"),
             ),
           ),
-          ElevatedButton(onPressed: authService.signInWithGoogle, child: const Text("Login with Google")),
+          ElevatedButton(
+            onPressed: loginWithGoogle,
+            child: const Text("Login with Google"),
+          ),
         ],
       ),
     );

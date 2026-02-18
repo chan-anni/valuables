@@ -19,6 +19,14 @@ class _RegisterPageState extends State<RegisterPage> {
   // Controller for ensuring the same password
   final _confirmPasswordController = TextEditingController();
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   void signUp() async {
     final email = _emailController.text;
     final password = _passwordController.text;

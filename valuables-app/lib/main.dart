@@ -9,9 +9,9 @@ import "package:google_sign_in/google_sign_in.dart";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   await dotenv.load(fileName: ".env");
-  
+
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
@@ -21,7 +21,7 @@ Future<void> main() async {
     clientId: dotenv.env['GOOGLE_CLIENT_ID']!,
     serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID']!,
   );
-  
+
   runApp(MyApp());
 }
 
@@ -33,11 +33,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-    theme: ThemeData(
-      primarySwatch: Colors.green,
-      useMaterial3: true,
-    ), 
-    home: const Navigation(),
+      theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
+      home: const Navigation(),
     );
   }
 }
@@ -78,7 +75,10 @@ class _NavigationState extends State<Navigation> {
           NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.map), label: 'Map'),
           NavigationDestination(icon: Icon(Icons.message), label: 'Messages'),
-          NavigationDestination(icon: Icon(Icons.account_circle), label: 'Profile'),
+          NavigationDestination(
+            icon: Icon(Icons.account_circle),
+            label: 'Profile',
+          ),
         ],
         onDestinationSelected: (int index) {
           setPageIndex(index);
@@ -148,8 +148,12 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   void initState() {
     super.initState();
     final user = _supabase.auth.currentUser;
-    _nameController = TextEditingController(text: user?.userMetadata?['name'] ?? '');
-    _usernameController = TextEditingController(text: user?.userMetadata?['username'] ?? '');
+    _nameController = TextEditingController(
+      text: user?.userMetadata?['name'] ?? '',
+    );
+    _usernameController = TextEditingController(
+      text: user?.userMetadata?['username'] ?? '',
+    );
   }
 
   @override
@@ -182,9 +186,9 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
       }
     }
   }
@@ -204,8 +208,12 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                 radius: 50,
                 backgroundColor: Colors.grey.shade300,
                 child: Text(
-                  (user?.userMetadata?['name'] as String? ?? 'U')[0].toUpperCase(),
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  (user?.userMetadata?['name'] as String? ?? 'U')[0]
+                      .toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -216,9 +224,15 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                 children: [
                   _ProfileInfoBox(label: 'Email', value: user?.email ?? 'N/A'),
                   const SizedBox(height: 12),
-                  _ProfileInfoBox(label: 'Name', value: user?.userMetadata?['name'] ?? 'Not set'),
+                  _ProfileInfoBox(
+                    label: 'Name',
+                    value: user?.userMetadata?['name'] ?? 'Not set',
+                  ),
                   const SizedBox(height: 12),
-                  _ProfileInfoBox(label: 'Username', value: user?.userMetadata?['username'] ?? 'Not set'),
+                  _ProfileInfoBox(
+                    label: 'Username',
+                    value: user?.userMetadata?['username'] ?? 'Not set',
+                  ),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -228,7 +242,9 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                         backgroundColor: Colors.blue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: const Text('Edit Profile'),
                     ),
@@ -243,7 +259,9 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                     controller: _nameController,
                     decoration: InputDecoration(
                       labelText: 'Name',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -251,7 +269,9 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                     controller: _usernameController,
                     decoration: InputDecoration(
                       labelText: 'Username',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -264,9 +284,13 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                          child: _isLoading ? const CircularProgressIndicator() : const Text('Save'),
+                          child: _isLoading
+                              ? const CircularProgressIndicator()
+                              : const Text('Save'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -277,7 +301,9 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                             backgroundColor: Colors.grey,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('Cancel'),
                         ),
@@ -311,7 +337,14 @@ class _ProfileInfoBox extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(fontSize: 14)),
         ],
@@ -376,9 +409,9 @@ class _LoginFormState extends State<_LoginForm> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -396,7 +429,9 @@ class _LoginFormState extends State<_LoginForm> {
             controller: _emailController,
             decoration: InputDecoration(
               labelText: 'Email',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -405,7 +440,9 @@ class _LoginFormState extends State<_LoginForm> {
             obscureText: true,
             decoration: InputDecoration(
               labelText: 'Password',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -417,9 +454,13 @@ class _LoginFormState extends State<_LoginForm> {
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: _isLoading ? const CircularProgressIndicator() : const Text('Sign In'),
+              child: _isLoading
+                  ? const CircularProgressIndicator()
+                  : const Text('Sign In'),
             ),
           ),
         ],
@@ -462,14 +503,16 @@ class _SignUpFormState extends State<_SignUpForm> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign up successful! Please verify your email.')),
+          const SnackBar(
+            content: Text('Sign up successful! Please verify your email.'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sign up error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Sign up error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -488,7 +531,9 @@ class _SignUpFormState extends State<_SignUpForm> {
               controller: _nameController,
               decoration: InputDecoration(
                 labelText: 'Full Name',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -496,7 +541,9 @@ class _SignUpFormState extends State<_SignUpForm> {
               controller: _usernameController,
               decoration: InputDecoration(
                 labelText: 'Username',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -504,7 +551,9 @@ class _SignUpFormState extends State<_SignUpForm> {
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: 'Email',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -513,7 +562,9 @@ class _SignUpFormState extends State<_SignUpForm> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Password',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -525,9 +576,13 @@ class _SignUpFormState extends State<_SignUpForm> {
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: _isLoading ? const CircularProgressIndicator() : const Text('Sign Up'),
+                child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : const Text('Sign Up'),
               ),
             ),
           ],
@@ -565,15 +620,22 @@ class _SettingsTabState extends State<_SettingsTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Notifications', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Notifications',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             SwitchListTile(
               title: const Text('Notifications Enabled'),
               value: _notificationsEnabled,
-              onChanged: (value) => setState(() => _notificationsEnabled = value),
+              onChanged: (value) =>
+                  setState(() => _notificationsEnabled = value),
             ),
             const SizedBox(height: 24),
-            const Text('Privacy & Terms', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Privacy & Terms',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             SwitchListTile(
               title: const Text('Privacy Policy Agreed'),
@@ -581,7 +643,10 @@ class _SettingsTabState extends State<_SettingsTab> {
               onChanged: (value) => setState(() => _privacyEnabled = value),
             ),
             const SizedBox(height: 24),
-            const Text('App Info', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'App Info',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -591,23 +656,23 @@ class _SettingsTabState extends State<_SettingsTab> {
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('App Version'),
-                  Text('1.0.0'),
-                ],
+                children: [Text('App Version'), Text('1.0.0')],
               ),
             ),
             const SizedBox(height: 24),
             Center(
               child: TextButton(
-                  onPressed: () async {
-                    final navigator = Navigator.of(context);
-                    await _supabase.auth.signOut();
-                    if (!mounted) return;
-                    navigator.popUntil((route) => route.isFirst);
-                  },
-                  child: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                onPressed: () async {
+                  final navigator = Navigator.of(context);
+                  await _supabase.auth.signOut();
+                  if (!mounted) return;
+                  navigator.popUntil((route) => route.isFirst);
+                },
+                child: const Text(
+                  'Sign Out',
+                  style: TextStyle(color: Colors.red),
                 ),
+              ),
             ),
           ],
         ),
@@ -646,7 +711,7 @@ class _HistoryPageState extends State<HistoryPage> {
             .eq('user_id', userId)
             .eq('item_type', 'lost')
             .order('created_at', ascending: false);
-        
+
         final found = await _supabase
             .from('items')
             .select()
@@ -679,8 +744,12 @@ class _HistoryPageState extends State<HistoryPage> {
       final aClaimed = (a['status'] == 'claimed' || a['status'] == 'found');
       final bClaimed = (b['status'] == 'claimed' || b['status'] == 'found');
       if (aClaimed != bClaimed) return aClaimed ? 1 : -1;
-      final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final aDate =
+          DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bDate =
+          DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
       return bDate.compareTo(aDate);
     });
   }
@@ -697,9 +766,7 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your Activity'),
-      ),
+      appBar: AppBar(title: const Text('Your Activity')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -711,7 +778,10 @@ class _HistoryPageState extends State<HistoryPage> {
                     if (_historyError != null)
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.shade50,
                           border: Border.all(color: Colors.red.shade200),
@@ -728,20 +798,31 @@ class _HistoryPageState extends State<HistoryPage> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close, size: 20, color: Colors.red),
-                              onPressed: () => setState(() => _historyError = null),
+                              icon: const Icon(
+                                Icons.close,
+                                size: 20,
+                                color: Colors.red,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _historyError = null),
                               padding: EdgeInsets.zero,
                             ),
                           ],
                         ),
                       ),
                     TextField(
-                      onChanged: (value) => setState(() => _searchQuery = value),
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
                       decoration: InputDecoration(
                         hintText: 'Search your reports...',
                         prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -789,9 +870,18 @@ class _HistoryPageState extends State<HistoryPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 if (subtitle != null)
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
               ],
             ),
             const Spacer(),
@@ -801,7 +891,13 @@ class _HistoryPageState extends State<HistoryPage> {
                 color: Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('${items.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              child: Text(
+                '${items.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -825,7 +921,8 @@ class _HistoryPageState extends State<HistoryPage> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: items.length,
-            itemBuilder: (context, index) => _buildHistoryItem(items[index], allowDelete),
+            itemBuilder: (context, index) =>
+                _buildHistoryItem(items[index], allowDelete),
           ),
       ],
     );
@@ -834,7 +931,8 @@ class _HistoryPageState extends State<HistoryPage> {
   Widget _buildHistoryItem(dynamic item, bool allowDelete) {
     final itemType = item['item_type']?.toString().toUpperCase() ?? 'UNKNOWN';
     final isLost = itemType == 'LOST';
-    final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
+    final hasImage =
+        item['image_url'] != null && item['image_url'].toString().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -879,7 +977,10 @@ class _HistoryPageState extends State<HistoryPage> {
               children: [
                 Text(
                   item['title'] ?? 'Untitled',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -898,7 +999,11 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
           if (allowDelete)
             IconButton(
-              icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+              icon: const Icon(
+                Icons.delete_outline,
+                size: 20,
+                color: Colors.grey,
+              ),
               onPressed: () => _deleteItem(item['id']),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -914,15 +1019,15 @@ class _HistoryPageState extends State<HistoryPage> {
       await _supabase.from('items').delete().eq('id', itemId);
       await _loadHistory();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report deleted')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Report deleted')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting report: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting report: $e')));
       }
     }
   }
@@ -947,7 +1052,8 @@ class MapPage extends StatefulWidget {
 
 // Map page -- needs API key
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
   Future<void>? _addMarkersFuture;
 
   @override
@@ -958,30 +1064,30 @@ class _MapPageState extends State<MapPage> {
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746
-    );
+    zoom: 14.4746,
+  );
 
   // Test dummy markers
   final Set<Marker> _markers = <Marker>{
     Marker(
-      markerId: MarkerId('1'), 
-      position: LatLng(46.65428653800135, -122.30802267054545)
-      ),
-    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
+      markerId: MarkerId('1'),
+      position: LatLng(46.65428653800135, -122.30802267054545),
+    ),
+    Marker(
+      markerId: MarkerId('2'),
+      position: LatLng(48.65428653800135, -122.30802267054545),
+    ),
   };
 
   Future<void> _addMarkers() async {
-
-    final data = await _supabase
-    .from('items')
-    .select();
+    final data = await _supabase.from('items').select();
 
     for (var item in data) {
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
-        position: LatLng(item['location_lat'], item['location_lng'])
-        );
-        _markers.add(newMarker);
+        position: LatLng(item['location_lat'], item['location_lng']),
+      );
+      _markers.add(newMarker);
     }
   }
 
@@ -989,28 +1095,27 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder(
-        future: _addMarkersFuture, 
+        future: _addMarkersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child:
-                      CircularProgressIndicator()); // Show loading spinner while markers load
-            } else if (snapshot.hasError) {
-              return Center(
-                  child: Text(
-                      'Error: ${snapshot.error}')); // Display error if marker loading fails
-            } else {
-              return GoogleMap(
-                initialCameraPosition: startPos,
-                markers: _markers,
-                onMapCreated: (GoogleMapController controller) {
-                  _controller.complete(controller);
-                },
-              );
-            }
-        }
-        
-        ),
+            return const Center(
+              child: CircularProgressIndicator(),
+            ); // Show loading spinner while markers load
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            ); // Display error if marker loading fails
+          } else {
+            return GoogleMap(
+              initialCameraPosition: startPos,
+              markers: _markers,
+              onMapCreated: (GoogleMapController controller) {
+                _controller.complete(controller);
+              },
+            );
+          }
+        },
+      ),
     );
   }
 }
