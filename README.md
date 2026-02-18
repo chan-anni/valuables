@@ -200,7 +200,9 @@ As of the Beta version, the current app can perform the core feature of submitti
 The use case would be the following:
 
 **User Goal**: A finder wants to quickly report someone's lost accessory that they found so the owner can locate it on the map.
+
 **Success Conditions**: The item is logged into the database, and it shows on the map interface.
+
 **Step by Step Flow**
 1. User clicks on the 'Report Item' form and clicks on the 'Found' item type.
 2. System loads up the form.
