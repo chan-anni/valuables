@@ -5,6 +5,22 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Load a key from .env (Flutter project root, sibling of android/)
+fun loadEnvKey(key: String): String {
+    val envFile = rootProject.file("../.env")
+    if (!envFile.exists()) return ""
+    return envFile.readLines()
+        .asSequence()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() && !it.startsWith("#") }
+        .mapNotNull { line ->
+            val eq = line.indexOf('=')
+            if (eq <= 0) null else line.substring(0, eq).trim() to line.substring(eq + 1).trim().trim('"').trim('\'')
+        }
+        .firstOrNull { (k, _) -> k == key }
+        ?.second ?: ""
+}
+
 android {
     namespace = "com.example.valuables"
     compileSdk = flutter.compileSdkVersion
@@ -28,6 +44,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["GOOGLE_MAP_KEY"] = loadEnvKey("GOOGLE_MAP_KEY")
     }
 
     buildTypes {
