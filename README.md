@@ -69,6 +69,9 @@ Add the following keys (get values from a team member):
 ```
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
+GOOGLE_MAP_KEY=ios_or_android_key
+GOOGLE_CLIENT_ID=client_id
+GOOGLE_SERVER_CLIENT_ID=server_client_id
 ```
 
 Google Maps — platform-level key registration
