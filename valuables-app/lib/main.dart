@@ -6,6 +6,7 @@ import 'package:valuables/auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
+import 'package:valuables/screens/lost_item_form.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -476,25 +477,66 @@ class _MapPageState extends State<MapPage> {
     zoom: 14.4746,
   );
 
-  // Test dummy markers
-  final Set<Marker> _markers = <Marker>{
-    Marker(
-      markerId: MarkerId('1'),
-      position: LatLng(46.65428653800135, -122.30802267054545),
-    ),
-    Marker(
-      markerId: MarkerId('2'),
-      position: LatLng(48.65428653800135, -122.30802267054545),
-    ),
-  };
+  final Set<Marker> _markers = <Marker>{};
 
-  Future<void> _addMarkers() async {
-    final data = await _supabase.from('items').select();
+ Future<void> _addMarkers() async {
+
+    final data = await Supabase.instance.client
+    .from('items')
+    .select();
 
     for (var item in data) {
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
         position: LatLng(item['location_lat'], item['location_lng']),
+        onTap: () {
+          showModalBottomSheet(context: context, 
+          builder: (BuildContext context){
+            return SizedBox.expand(
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(item['title'],
+                          style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
+                          textAlign: TextAlign.left,
+                          ),
+                          ElevatedButton(
+                            child: Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Image.network(item['image_url'], height: 200, width: 200),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(item['description']),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const LostItemForm()),
+                        );
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Submit Claim'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          );
+        }
       );
       _markers.add(newMarker);
     }
