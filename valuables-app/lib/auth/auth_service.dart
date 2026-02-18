@@ -58,7 +58,15 @@ class AuthService {
 
   /// Sign out from the current session
   Future<void> signOut() async {
-    return _supabase.auth.signOut();
+    final user = _supabase.auth.currentUser;
+    final isGoogle =
+        user?.appMetadata['provider'] == 'google' ||
+        user?.identities?.any((i) => i.provider == 'google') == true;
+
+    if (isGoogle) {
+      await GoogleSignIn.instance.signOut();
+    }
+    await _supabase.auth.signOut();
   }
 
   /// Get the current user's email
