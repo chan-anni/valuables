@@ -120,6 +120,7 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml:
 </manifest>
 
 ```
+DO NOT commit this file. It should already be in the .gitignore. 
 ### iOS
 Add/Create ios/Runner/AppDelegate.swift
 ```swift
@@ -141,6 +142,7 @@ import GoogleMaps
     }
 }
 ```
+DO NOT commit this file. It should already be in the .gitignore. 
 ### Repo Setup
 
 Run the following:
