@@ -39,15 +39,30 @@ class AuthService {
   }
 
   Future<AuthResponse> signInWithGoogle() async {
-    // Google sign in on Android will work without providing the Android
-    // Client ID registered on Google Cloud.
+    final googleSignIn = GoogleSignIn.instance;
 
-    // Perform the sign in
-    final googleAccount = await GoogleSignIn.instance.authenticate();
+    late final GoogleSignInAccount googleAccount;
+    try {
+      googleAccount = await googleSignIn.authenticate();
+    } on GoogleSignInException catch (e) {
+      switch (e.code) {
+        case GoogleSignInExceptionCode.canceled:
+        case GoogleSignInExceptionCode.interrupted:
+        case GoogleSignInExceptionCode.uiUnavailable:
+          throw Exception('Sign-in cancelled.');
+        default:
+          throw Exception(
+            e.description ?? 'Google Sign-In failed (${e.code.name}).',
+          );
+      }
+    }
+
     final idToken = googleAccount.authentication.idToken;
-
     if (idToken == null) {
-      throw Exception('No ID Token found.');
+      throw Exception(
+        'Google Sign-In did not return an ID token. '
+        'Check that Google Sign-In is configured with the correct client IDs.',
+      );
     }
 
     return await _supabase.auth.signInWithIdToken(
