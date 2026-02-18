@@ -382,7 +382,7 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Icon(Icons.notifications_active, size: 20),
                         SizedBox(width: 8),
-                        Text('Alerts On Your Lost Items', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text('Lost Items Alerts', style: TextStyle(fontWeight: FontWeight.bold)),
                       ],
                     ),
                     Container(
