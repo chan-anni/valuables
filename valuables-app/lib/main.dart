@@ -127,22 +127,48 @@ class _MapPageState extends State<MapPage> {
           builder: (BuildContext context){
             return SizedBox.expand(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(item['title'],
-                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 2.0),
-                        textAlign: TextAlign.left,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                children: <Widget>[
+                                  Text(item['title'],
+                                  style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
+                                  textAlign: TextAlign.left,
+                                  ),
+                                ],
+                              ),
+                              ElevatedButton(
+                                child: Icon(Icons.close),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                            ],
+                          ),
                         ),
                         Image.network(item['image_url'], height: 200, width: 200),
                         Padding(
                           padding: const EdgeInsets.all(12.0),
-                          child: Text(item['description'], ),
+                          child: Text(item['description']),
                         ),
-                        ElevatedButton(
-                          child: const Text('Close'),
-                          onPressed: () => Navigator.pop(context),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const LostItemForm()),
+                            );
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Submit Claim'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
+
                       ],
                     ),
                   );
