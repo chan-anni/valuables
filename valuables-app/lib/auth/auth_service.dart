@@ -39,44 +39,49 @@ class AuthService {
   }
 
   Future<AuthResponse> signInWithGoogle() async {
-    const webClientId =
-        '398491837853-hvd35lt2rgjb0g4ui20ft8kqg0oa4bmm.apps.googleusercontent.com';
+    final googleSignIn = GoogleSignIn.instance;
 
-    const iosClientId =
-        '398491837853-k279v0djfia5g0s9itnnnbumo2a24aab.apps.googleusercontent.com';
+    late final GoogleSignInAccount googleAccount;
+    try {
+      googleAccount = await googleSignIn.authenticate();
+    } on GoogleSignInException catch (e) {
+      switch (e.code) {
+        case GoogleSignInExceptionCode.canceled:
+        case GoogleSignInExceptionCode.interrupted:
+        case GoogleSignInExceptionCode.uiUnavailable:
+          throw Exception('Sign-in cancelled.');
+        default:
+          throw Exception(
+            e.description ?? 'Google Sign-In failed (${e.code.name}).',
+          );
+      }
+    }
 
-    // Google sign in on Android will work without providing the Android
-    // Client ID registered on Google Cloud.
-
-    final GoogleSignIn signIn = GoogleSignIn.instance;
-
-    // At the start of your app, initialize the GoogleSignIn instance
-    unawaited(
-      signIn.initialize(clientId: iosClientId, serverClientId: webClientId),
-    );
-
-    // Perform the sign in
-    final googleAccount = await signIn.authenticate();
-    final googleAuthorization = await googleAccount.authorizationClient
-        .authorizationForScopes([]);
-    final googleAuthentication = googleAccount.authentication;
-    final idToken = googleAuthentication.idToken;
-    final accessToken = googleAuthorization?.accessToken;
-
+    final idToken = googleAccount.authentication.idToken;
     if (idToken == null) {
-      throw 'No ID Token found.';
+      throw Exception(
+        'Google Sign-In did not return an ID token. '
+        'Check that Google Sign-In is configured with the correct client IDs.',
+      );
     }
 
     return await _supabase.auth.signInWithIdToken(
       provider: OAuthProvider.google,
       idToken: idToken,
-      accessToken: accessToken,
     );
   }
 
   /// Sign out from the current session
   Future<void> signOut() async {
-    return _supabase.auth.signOut();
+    final user = _supabase.auth.currentUser;
+    final isGoogle =
+        user?.appMetadata['provider'] == 'google' ||
+        user?.identities?.any((i) => i.provider == 'google') == true;
+
+    if (isGoogle) {
+      await GoogleSignIn.instance.signOut();
+    }
+    await _supabase.auth.signOut();
   }
 
   /// Get the current user's email
