@@ -1,7 +1,5 @@
 # Valuables
 
-# TODO: Include which use case we can say fits with the beta version
-
 Valuables is a location-based lost and found platform designed to connect item owners with finders through an intuitive visual map interface. By anchoring discovery to specific locations, Valuables makes it easier to report found items, search for lost belongings, and coordinate safe item returns.
 
 ## Project Goals
@@ -195,3 +193,21 @@ Uploads coverage/lcov.info to Codecov
 Viewing results
 Go to your PR on GitHub -> scroll to Checks -> click any job name to see full logs. A Codecov comment is also posted automatically on each PR to show information.
 
+
+## Use Case
+
+As of the Beta version, the current app can perform the core feature of submitting a 'found item' claim. 
+The use case would be the following:
+
+**User Goal**: A finder wants to quickly report someone's lost accessory that they found so the owner can locate it on the map.
+**Success Conditions**: The item is logged into the database, and it shows on the map interface.
+**Step by Step Flow**
+1. User clicks on the 'Report Item' form and clicks on the 'Found' item type.
+2. System loads up the form.
+3. User fills out the form with a title, corresponding category, and chooses a date for when they found the item. The user then clicks the location button.
+4. System loads up a map screen where the user can type in an address in the search bar, use their current location, or click on the map to place a pin.
+5. User clicks on a location and then confirms the location.
+6. System loads back to the form page with the location now chosen.
+7. User clicks on the upload image button and uploads an image.
+8. User clicks submit to the form.
+9. System confirms and takes the user back to the home page. Item information is loaded into the backend database. An item marker appears on the map page.
