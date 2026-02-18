@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/screens/lost_item_form.dart';
+import 'package:valuables/main.dart' show HistoryPage;
 
 // Trivial comment to test the code coverage comments setup
 class HomePage extends StatefulWidget {
@@ -19,6 +20,9 @@ class _HomePageState extends State<HomePage> {
   bool _isLoading = true;
   bool _itemsExpanded = false;
   String? _errorMessage;
+  // Notification preferences
+  bool _emailNotifications = true;
+  bool _pushNotifications = true;
 
   @override
   void initState() {
@@ -128,6 +132,281 @@ class _HomePageState extends State<HomePage> {
     return user?.userMetadata?['name'] ?? user?.email ?? 'Guest User';
   }
 
+  void _showSettingsModal(BuildContext context) {
+    final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Settings',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              
+              // Account Section
+              if (isLoggedIn) ...[
+                const Text(
+                  'Account',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  leading: const Icon(Icons.person),
+                  title: const Text('Edit Profile'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushNamed(context, '/account');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                  onTap: () async {
+                    final navigationContext = context;
+                    Navigator.pop(navigationContext);
+                    await _supabase.auth.signOut();
+                    if (mounted) {
+                      // ignore: use_build_context_synchronously
+                      ScaffoldMessenger.of(navigationContext).showSnackBar(
+                        const SnackBar(content: Text('Logged out successfully')),
+                      );
+                      setState(() {});
+                    }
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+              
+              // Notifications Section
+              const Text(
+                'Notifications',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.email),
+                title: const Text('Email Notifications'),
+                trailing: Switch(
+                  value: _emailNotifications,
+                  onChanged: (value) {
+                    setState(() {
+                      _emailNotifications = value;
+                    });
+                  },
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_active),
+                title: const Text('Push Notifications'),
+                trailing: Switch(
+                  value: _pushNotifications,
+                  onChanged: (value) {
+                    setState(() {
+                      _pushNotifications = value;
+                    });
+                  },
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Match alerts are always enabled to help you find your items and connect with others.',
+                        style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // About Section
+              const Text(
+                'About',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                leading: const Icon(Icons.info),
+                title: const Text('About Valuables'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('About Valuables'),
+                      content: const Text(
+                        'Valuables is a community-driven platform where people can report lost items and upload found items. Our mission is to reunite valuable possessions with their owners by connecting people who have found items with those searching for them.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.help),
+                title: const Text('Help & Support'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Help & Support'),
+                      content: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              'How to Use Valuables',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              '📱 Reporting Items\n'
+                              'You can report lost or found items by tapping the "Report Item" button on the home screen. Provide details like item description, location, and images to help others identify it.\n\n'
+                              '🔔 Notifications\n'
+                              'When someone uploads a found item that matches your lost item report, you\'ll receive a notification. Similarly, if your found item matches someone\'s lost item report, they\'ll be notified.\n\n'
+                              '💬 Messaging & Claims\n'
+                              'Once you see a potential match, you can message the other user directly through the app. Discuss details like the item\'s condition, location, and meeting arrangements. Users can claim items, and claimed items are moved to your activity history.\n\n'
+                              '📋 Activity History\n'
+                              'Your Activity & History section shows claimed items and past match alerts. This helps you keep track of your transactions and maintain a record of items you\'ve successfully recovered or helped others retrieve.\n\n'
+                              '🔍 Browsing\n'
+                              'Use the Map view to search for items in specific locations. Filter by category or date to find what you\'re looking for.\n\n'
+                              '❓ Need More Help?\n'
+                              'If you have questions, please contact our support team through the app.',
+                            ),
+                          ],
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showActivityModal(BuildContext context) {
+    final outerContext = context; // Save the outer context for navigation
+    showModalBottomSheet(
+      context: context,
+      builder: (modalContext) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Activity & History',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(modalContext),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Activity Summary
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.history, color: Colors.blue.shade600),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Recent Activity',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                        Text(
+                          'View your reports, alerts, and messages',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(modalContext);
+                  // Import HistoryPage from main.dart and navigate directly
+                  Navigator.of(outerContext).push(
+                    MaterialPageRoute(
+                      builder: (context) => const HistoryPage(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.arrow_forward),
+                label: const Text('View Full Activity History'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _getWelcomeMessage() {
     final user = _supabase.auth.currentUser;
     final name = user?.userMetadata?['name'] as String?;
@@ -165,10 +444,10 @@ class _HomePageState extends State<HomePage> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    Navigator.pushNamed(context, '/account');
+                    _showSettingsModal(context);
                   },
                   icon: const Icon(Icons.edit),
-                  label: const Text('Edit Profile & Account'),
+                  label: const Text('Edit Profile & Settings'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -278,15 +557,11 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/account');
-                        },
+                        onPressed: () => _showSettingsModal(context),
                         icon: const Icon(Icons.settings),
                       ),
                       IconButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/history');
-                        },
+                        onPressed: () => _showActivityModal(context),
                         icon: const Icon(Icons.history),
                       ),
                     ],
