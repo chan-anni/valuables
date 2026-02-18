@@ -25,6 +25,9 @@ jobs:
         working-directory: valuables-app
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Create .env file
+        run: echo "${{ secrets.ENV_FILE }}" > .env
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
