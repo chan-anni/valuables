@@ -7,7 +7,7 @@ import 'map_picker_screen.dart';
 
 class LostItemForm extends StatefulWidget {
   final SupabaseClient? supabaseClient;
-
+  
   const LostItemForm({super.key, this.supabaseClient});
 
   @override
@@ -17,7 +17,7 @@ class LostItemForm extends StatefulWidget {
 class _LostItemFormState extends State<LostItemForm> {
   SupabaseClient? _supabase;
   final _formKey = GlobalKey<FormState>();
-
+  
   // Form controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -30,7 +30,7 @@ class _LostItemFormState extends State<LostItemForm> {
   DateTime? _dateFound;
   DateTime? _dateLost;
   bool _isLoading = false;
-
+  
   // Location values
   double? _locationLat;
   double? _locationLng;
@@ -110,9 +110,9 @@ class _LostItemFormState extends State<LostItemForm> {
                       ),
                     ),
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Title
                   TextFormField(
                     controller: _titleController,
@@ -129,9 +129,9 @@ class _LostItemFormState extends State<LostItemForm> {
                       return null;
                     },
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Category
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(
@@ -158,9 +158,9 @@ class _LostItemFormState extends State<LostItemForm> {
                       return null;
                     },
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Description
                   TextFormField(
                     controller: _descriptionController,
@@ -179,47 +179,42 @@ class _LostItemFormState extends State<LostItemForm> {
                       return null;
                     },
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Date picker
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.calendar_today),
-                      title: Text(
-                        _selectedType == 'lost'
-                            ? 'Date Lost *'
-                            : 'Date Found *',
-                      ),
+                      title: Text(_selectedType == 'lost' ? 'Date Lost *' : 'Date Found *'),
                       subtitle: Text(
                         _dateLost != null || _dateFound != null
                             ? DateFormat('MMMM dd, yyyy').format(
-                                _selectedType == 'lost'
-                                    ? _dateLost!
-                                    : _dateFound!,
-                              )
+                                _selectedType == 'lost' ? _dateLost! : _dateFound!)
                             : 'Tap to select date',
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: _pickDate,
                     ),
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Location picker
                   Card(
                     child: ListTile(
                       leading: const Icon(Icons.location_on),
                       title: const Text('Location'),
-                      subtitle: Text(_locationName ?? 'Tap to select on map'),
+                      subtitle: Text(
+                        _locationName ?? 'Tap to select on map',
+                      ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: _pickLocation,
                     ),
                   ),
-
+                  
                   const SizedBox(height: 16),
-
+                  
                   // Image upload
                   Card(
                     child: Column(
@@ -227,13 +222,10 @@ class _LostItemFormState extends State<LostItemForm> {
                         ListTile(
                           leading: const Icon(Icons.camera_alt),
                           title: const Text('Add Photo'),
-                          subtitle: Text(
-                            _imageFile != null ? 'Photo selected' : 'Optional',
-                          ),
-                          trailing: const Icon(
-                            Icons.arrow_forward_ios,
-                            size: 16,
-                          ),
+                          subtitle: Text(_imageFile != null 
+                              ? 'Photo selected' 
+                              : 'Optional'),
+                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                           onTap: _pickImage,
                         ),
                         if (_imageFile != null) ...[
@@ -255,10 +247,7 @@ class _LostItemFormState extends State<LostItemForm> {
                                   top: 8,
                                   right: 8,
                                   child: IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                    ),
+                                    icon: const Icon(Icons.close, color: Colors.white),
                                     onPressed: () {
                                       setState(() {
                                         _imageFile = null;
@@ -276,9 +265,9 @@ class _LostItemFormState extends State<LostItemForm> {
                       ],
                     ),
                   ),
-
+                  
                   const SizedBox(height: 32),
-
+                  
                   // Submit button
                   FilledButton(
                     onPressed: _submitForm,
@@ -317,26 +306,28 @@ class _LostItemFormState extends State<LostItemForm> {
   }
 
   Future<void> _pickLocation() async {
-    final result = await Navigator.push<MapPickerResult>(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            MapPickerScreen(initialLat: _locationLat, initialLng: _locationLng),
+  final result = await Navigator.push<MapPickerResult>(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MapPickerScreen(
+        initialLat: _locationLat,
+        initialLng: _locationLng,
       ),
-    );
+    ),
+  );
 
-    if (result != null) {
-      setState(() {
-        _locationLat = result.lat;
-        _locationLng = result.lng;
-        _locationName = result.locationName;
-      });
-    }
+  if (result != null) {
+    setState(() {
+      _locationLat = result.lat;
+      _locationLng = result.lng;
+      _locationName = result.locationName;
+    });
   }
+}
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-
+    
     // Show options: Camera or Gallery
     final source = await showDialog<ImageSource>(
       context: context,
@@ -359,16 +350,16 @@ class _LostItemFormState extends State<LostItemForm> {
         ),
       ),
     );
-
+    
     if (source == null) return;
-
+    
     final pickedFile = await picker.pickImage(
       source: source,
       maxWidth: 1920,
       maxHeight: 1080,
       imageQuality: 85,
     );
-
+    
     if (pickedFile != null) {
       if (!mounted) return;
       setState(() {
@@ -386,15 +377,15 @@ class _LostItemFormState extends State<LostItemForm> {
         ),
       );
     }
-
+    
     try {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'items/$fileName';
-
+      
       await _supabase!.storage.from('items').upload(path, _imageFile!);
-
+      
       final imageUrl = _supabase!.storage.from('items').getPublicUrl(path);
-
+      
       return imageUrl;
     } catch (e) {
       // return a snackbar error message instead of returning null
@@ -414,7 +405,7 @@ class _LostItemFormState extends State<LostItemForm> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
+    
     // Check date
     if ((_selectedType == 'lost' && _dateLost == null) ||
         (_selectedType == 'found' && _dateFound == null)) {
@@ -425,11 +416,11 @@ class _LostItemFormState extends State<LostItemForm> {
       }
       return;
     }
-
+    
     setState(() {
       _isLoading = true;
     });
-
+    
     try {
       // Skip Supabase operations if no client is provided (testing mode)
       if (_supabase == null) {
@@ -445,18 +436,18 @@ class _LostItemFormState extends State<LostItemForm> {
         }
         return;
       }
-
+      
       final user = _supabase!.auth.currentUser;
-
+      
       // For now, use a test user ID if no user is logged in
       // TODO: Implement proper authentication
       final userId = user?.id;
-
+      
       // Upload image if selected
       if (_imageFile != null) {
         _imageUrl = await _uploadImage();
       }
-
+      
       final data = {
         'user_id': userId,
         'type': _selectedType,
@@ -477,7 +468,7 @@ class _LostItemFormState extends State<LostItemForm> {
       };
 
       await _supabase!.from('items').insert(data).select();
-
+      
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
