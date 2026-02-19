@@ -22,8 +22,18 @@ class MapPickerResult {
 class MapPickerScreen extends StatefulWidget {
   final double? initialLat;
   final double? initialLng;
+  
+  // Test hooks: allow injecting initial search results and location name cache
+  final List<Location>? initialSearchResults;
+  final Map<String, String>? initialLocationNames;
 
-  const MapPickerScreen({super.key, this.initialLat, this.initialLng});
+  const MapPickerScreen({
+    super.key,
+    this.initialLat,
+    this.initialLng,
+    this.initialSearchResults,
+    this.initialLocationNames,
+  });
 
   @override
   State<MapPickerScreen> createState() => _MapPickerScreenState();
@@ -47,6 +57,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   final Map<String, String> _locationNames = {}; // Cache for location names
   Timer? _debounceTimer;
 
+
+
   static const LatLng _defaultLocation = LatLng(
     47.6062,
     -122.3321,
@@ -58,6 +70,13 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     super.initState();
     if (widget.initialLat != null && widget.initialLng != null) {
       _pickedLocation = LatLng(widget.initialLat!, widget.initialLng!);
+    }
+    // If tests injected initial search results or names, wire them into state
+    if (widget.initialSearchResults != null) {
+      _searchResults = widget.initialSearchResults!;
+    }
+    if (widget.initialLocationNames != null) {
+      _locationNames.addAll(widget.initialLocationNames!);
     }
   }
 
