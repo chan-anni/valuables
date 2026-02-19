@@ -15,8 +15,8 @@ void _mockMapChannel() {
 Future<void> pumpForm(WidgetTester tester) async {
   _mockMapChannel();
   await tester.pumpWidget(
-    const MaterialApp(
-      home: LostItemForm(), // supabaseClient defaults to null in test mode
+    MaterialApp(
+      home: LostItemForm(testMode: true), // keep form in test mode for widget tests
     ),
   );
   await tester.pumpAndSettle();
@@ -257,7 +257,7 @@ void main() {
     testWidgets('Form renders correctly with all fields', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: LostItemForm()));
+      await tester.pumpWidget(MaterialApp(home: LostItemForm(testMode: true)));
 
       await tester.pumpAndSettle();
 
@@ -273,8 +273,8 @@ void main() {
     });
     testWidgets('Date picker opens when tapped', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: LostItemForm(),
+        MaterialApp(
+          home: LostItemForm(testMode: true),
         ),
       );
       await tester.pumpAndSettle();
