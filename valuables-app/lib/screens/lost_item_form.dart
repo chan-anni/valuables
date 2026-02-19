@@ -52,7 +52,7 @@ class _LostItemFormState extends State<LostItemForm> {
   void initState() {
     super.initState();
     // Initialize Supabase client - can be injected for testing
-    _supabase = widget.supabaseClient;
+        _supabase = widget.supabaseClient ?? Supabase.instance.client;
   }
 
   @override
