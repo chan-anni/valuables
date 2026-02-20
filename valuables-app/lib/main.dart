@@ -479,20 +479,18 @@ class _MapPageState extends State<MapPage> {
 
   final Set<Marker> _markers = <Marker>{};
 
- Future<void> _addMarkers() async {
-
-    final data = await Supabase.instance.client
-    .from('items')
-    .select();
+  Future<void> _addMarkers() async {
+    final data = await Supabase.instance.client.from('items').select();
 
     for (var item in data) {
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
         position: LatLng(item['location_lat'], item['location_lng']),
         onTap: () {
-          showModalBottomSheet(context: context, 
-          builder: (BuildContext context){
-            return SizedBox.expand(
+          showModalBottomSheet(
+            context: context,
+            builder: (BuildContext context) {
+              return SizedBox.expand(
                 child: Column(
                   children: [
                     Padding(
@@ -500,9 +498,12 @@ class _MapPageState extends State<MapPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(item['title'],
-                          style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                          textAlign: TextAlign.left,
+                          Text(
+                            item['title'],
+                            style: DefaultTextStyle.of(
+                              context,
+                            ).style.apply(fontSizeFactor: 1.6),
+                            textAlign: TextAlign.left,
                           ),
                           ElevatedButton(
                             child: Icon(Icons.close),
@@ -520,13 +521,18 @@ class _MapPageState extends State<MapPage> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LostItemForm()),
+                          MaterialPageRoute(
+                            builder: (context) => const LostItemForm(),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.add),
                       label: const Text('Submit Claim'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                       ),
@@ -534,9 +540,9 @@ class _MapPageState extends State<MapPage> {
                   ],
                 ),
               );
-            }
+            },
           );
-        }
+        },
       );
       _markers.add(newMarker);
     }
