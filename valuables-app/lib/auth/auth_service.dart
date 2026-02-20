@@ -9,7 +9,20 @@ import "package:supabase_flutter/supabase_flutter.dart";
 import "package:google_sign_in/google_sign_in.dart";
 
 class AuthService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  late final GoogleSignIn _googleSignIn;
+  late final SupabaseClient _supabase;
+  late final GoogleSignInAccount googleAccount;
+
+  AuthService() {
+    _googleSignIn = GoogleSignIn.instance;
+    _supabase = Supabase.instance.client;
+  }
+
+  AuthService.setClients({
+    required SupabaseClient supabase,
+    required GoogleSignIn googleSignIn,
+  }) : _supabase = supabase,
+       _googleSignIn = googleSignIn;
 
   /// Sign in with personal email and password
   ///
@@ -39,11 +52,8 @@ class AuthService {
   }
 
   Future<AuthResponse> signInWithGoogle() async {
-    final googleSignIn = GoogleSignIn.instance;
-
-    late final GoogleSignInAccount googleAccount;
     try {
-      googleAccount = await googleSignIn.authenticate();
+      googleAccount = await _googleSignIn.authenticate();
     } on GoogleSignInException catch (e) {
       switch (e.code) {
         case GoogleSignInExceptionCode.canceled:
