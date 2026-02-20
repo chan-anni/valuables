@@ -504,14 +504,32 @@ class _MapPageState extends State<MapPage> {
                           style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
                           textAlign: TextAlign.left,
                           ),
-                          ElevatedButton(
-                            child: Icon(Icons.close),
+                          IconButton(
+                            icon: Icon(Icons.close),
+                            tooltip: 'Close',
                             onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
                     ),
-                    Image.network(item['image_url'], height: 200, width: 200),
+                    (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
+                      ? Image.network(
+                      item['image_url'], 
+                      height: 200, width: 200, 
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress != null) {
+                          return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
+                        } else {
+                          return child;
+                        }
+                      },
+                      )
+                      : Container(
+                                height: 200,
+                                width: 200,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.image_not_supported),
+                              ),
                     Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Text(item['description']),
