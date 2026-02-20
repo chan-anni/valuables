@@ -7,10 +7,15 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
 import 'package:valuables/screens/lost_item_form.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await dotenv.load(fileName: ".env");
 
   await Supabase.initialize(
@@ -479,68 +484,144 @@ class _MapPageState extends State<MapPage> {
 
   final Set<Marker> _markers = <Marker>{};
 
- Future<void> _addMarkers() async {
+//  Future<void> _addMarkers() async {
 
-    final data = await Supabase.instance.client
-    .from('items')
-    .select();
+//     final data = await Supabase.instance.client
+//     .from('items')
+//     .select();
 
-    for (var item in data) {
-      Marker newMarker = Marker(
-        markerId: MarkerId(item['id']),
-        position: LatLng(item['location_lat'], item['location_lng']),
-        onTap: () {
-          showModalBottomSheet(context: context, 
-          builder: (BuildContext context){
-            return SizedBox.expand(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(item['title'],
-                          style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                          textAlign: TextAlign.left,
-                          ),
-                          ElevatedButton(
-                            child: Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Image.network(item['image_url'], height: 200, width: 200),
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Text(item['description']),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LostItemForm()),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Submit Claim'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-          );
-        }
-      );
-      _markers.add(newMarker);
+//     for (var item in data) {
+//       Marker newMarker = Marker(
+//         markerId: MarkerId(item['id']),
+//         position: LatLng(item['location_lat'], item['location_lng']),
+//         onTap: () {
+//           showModalBottomSheet(context: context, 
+//           builder: (BuildContext context){
+//             return SizedBox.expand(
+//                 child: Column(
+//                   children: [
+//                     Padding(
+//                       padding: const EdgeInsets.all(16.0),
+//                       child: Row(
+//                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                         children: [
+//                           Text(item['title'],
+//                           style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
+//                           textAlign: TextAlign.left,
+//                           ),
+//                           ElevatedButton(
+//                             child: Icon(Icons.close),
+//                             onPressed: () => Navigator.pop(context),
+//                           ),
+//                         ],
+//                       ),
+//                     ),
+//                     Image.network(item['image_url'], height: 200, width: 200),
+//                     Padding(
+//                       padding: const EdgeInsets.all(12.0),
+//                       child: Text(item['description']),
+//                     ),
+//                     ElevatedButton.icon(
+//                       onPressed: () {
+//                         Navigator.push(
+//                           context,
+//                           MaterialPageRoute(builder: (context) => const LostItemForm()),
+//                         );
+//                       },
+//                       icon: const Icon(Icons.add),
+//                       label: const Text('Submit Claim'),
+//                       style: ElevatedButton.styleFrom(
+//                         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+//                         backgroundColor: Colors.green,
+//                         foregroundColor: Colors.white,
+//                       ),
+//                     ),
+//                   ],
+//                 ),
+//               );
+//             }
+//           );
+//         }
+//       );
+//       _markers.add(newMarker);
+//     }
+//   }
+Future<void> _addMarkers() async {
+  final data = await Supabase.instance.client
+      .from('items')
+      .select();
+
+  for (var item in data) {
+    final lat = item['location_lat'];
+    final lng = item['location_lng'];
+
+    // Skip invalid coordinates
+    if (lat == null || lng == null) {
+      print('Skipping item with null coords: ${item['id']}');
+      continue;
     }
+
+    double latitude;
+    double longitude;
+
+    try {
+      latitude = (lat as num).toDouble();
+      longitude = (lng as num).toDouble();
+    } catch (e) {
+      print('Invalid coordinate type for item ${item['id']}');
+      continue;
+    }
+
+    final marker = Marker(
+      markerId: MarkerId(item['id'].toString()),
+      position: LatLng(latitude, longitude),
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (context) {
+            return SizedBox.expand(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          item['title'] ?? 'Untitled',
+                          style: DefaultTextStyle.of(context)
+                              .style
+                              .apply(fontSizeFactor: 1.6),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (item['image_url'] != null)
+                    Image.network(
+                      item['image_url'],
+                      height: 200,
+                      width: 200,
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Text(item['description'] ?? ''),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    _markers.add(marker);
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
