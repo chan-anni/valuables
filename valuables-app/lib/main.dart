@@ -568,7 +568,7 @@ Future<void> _addMarkers() async {
       latitude = (lat as num).toDouble();
       longitude = (lng as num).toDouble();
     } catch (e) {
-      print('Invalid coordinate type for item ${item['id']}');
+      SnackBar(content: Text('Invalid coordinates for item ${item['id']}'));
       continue;
     }
 
