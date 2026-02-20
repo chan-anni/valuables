@@ -18,6 +18,8 @@ class MockGoogleSignInAuthentication extends Mock
 
 class MockAuthResponse extends Mock implements AuthResponse {}
 
+class MockGoTrueClient extends Mock implements GoTrueClient {}
+
 void main() {
   late MockGoogleSignIn mockGoogleSignIn;
   late SupabaseClient mockSupabaseClient;
@@ -38,11 +40,25 @@ void main() {
       final mockAccount = MockGoogleSignInAccount();
       final mockAuth = MockGoogleSignInAuthentication();
       final mockResponse = MockAuthResponse();
+      final mockAuthClient = MockGoTrueClient();
       final fakeIdToken = 'fake_jwt_id_token';
 
       when(
         () => mockGoogleSignIn.authenticate(),
       ).thenAnswer((_) async => mockAccount);
+
+      when(() => mockAccount.authentication,).thenAnswer((_) => mockAuth);
+
+      when(() => mockAuth.idToken,).thenAnswer((_) => fakeIdToken);
+
+      when(() => mockAuthClient.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: fakeIdToken
+      )).thenAnswer((_) async => mockResponse);
     });
+
+    final result = authService.signInWithGoogle();
+
+    expect(result, equals(mockResponse));
   });
 }
