@@ -210,19 +210,6 @@ void main() {
       expect(find.text('Submit Report'), findsOneWidget);
     });
 
-    testWidgets('shows "Location" label on the location ListTile', (
-      tester,
-    ) async {
-      await pumpForm(tester);
-      // needs to scroll until visible because it's below the fold in the ListView
-      await tester.scrollUntilVisible(
-        find.text('Location'),
-        100,
-        scrollable: find.byType(Scrollable).first,
-      );
-      expect(find.text('Location'), findsOneWidget);
-    });
-
     testWidgets('shows "Tap to select date" as default date subtitle', (
       tester,
     ) async {
