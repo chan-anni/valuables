@@ -159,8 +159,12 @@ Thumbs.db
 docs/doxygen/
 xcuserdata
 third_party/gn/
-
-# Miscellaneous
+*.p8
+*.jks
+*.keystore
+*.p8
+service-account-file.json
+local.properties
 .atom/
 .svn/
 
