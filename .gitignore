@@ -175,3 +175,8 @@ local.properties
 .pub-cache/
 # Android related
 **/android/.gradle
+
+# ignoring these even tho they have public client facing API keys because git guardian doesn't like
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart
