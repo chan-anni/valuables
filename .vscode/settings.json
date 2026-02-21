@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/home/osc/git/valuables/valuables-app/linux"
+    "cmake.sourceDirectory": "/home/osc/git/valuables/valuables-app/linux",
+    "java.configuration.updateBuildConfiguration": "interactive"
 }

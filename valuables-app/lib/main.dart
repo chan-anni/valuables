@@ -9,35 +9,89 @@ import "package:google_sign_in/google_sign_in.dart";
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+// Put this inside an async function, like initState or a button press
+void getMyToken() async {
+  String? token = await FirebaseMessaging.instance.getToken();
+  print("---------- TEST TOKEN START ----------");
+  print(token);
+  print("---------- TEST TOKEN END ----------");
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  await dotenv.load(fileName: ".env");
+  
+  String? _initError;
+  try {
+    await dotenv.load(fileName: ".env");
 
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
+    await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL']!,
+      anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    );
 
-  await GoogleSignIn.instance.initialize(
-    clientId: dotenv.env['GOOGLE_CLIENT_ID']!,
-    serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID']!,
-  );
+    await GoogleSignIn.instance.initialize(
+      clientId: dotenv.env['GOOGLE_CLIENT_ID']!,
+      serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID']!,
+    );
 
-  runApp(MyApp());
+    // Initialize Firebase. In some environments the native SDK may already
+    // have initialized the default app (for example when google-services.json
+    // / GoogleService-Info.plist auto-initialize it). Calling
+    // `initializeApp` again will throw a duplicate-app error. We try to
+    // initialize only when no apps are registered, and still catch and ignore
+    // duplicate-app errors for robustness (useful during hot-restart / tests).
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+      }
+    } catch (e) {
+      final msg = e.toString();
+      // If the error indicates the default app already exists, ignore it.
+      if (msg.contains('already exists') || msg.contains('duplicate')) {
+        // ignore: avoid_print
+        print('Firebase already initialized by native layer; continuing.');
+      } else {
+        // Re-throw unexpected initialization errors so we capture them above
+        // and show the initialization error UI.
+        rethrow;
+      }
+    }
+  } catch (e, st) {
+    // Capture initialization errors so we can show a helpful error screen
+    _initError = '$e\n\n${st.toString()}';
+    // Also print to console for device logs
+    // ignore: avoid_print
+    print('App initialization failed: $_initError');
+  }
+
+  runApp(MyApp(initError: _initError));
 }
 
 final _supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final String? initError;
+  const MyApp({super.key, this.initError});
 
   @override
   Widget build(BuildContext context) {
+    if (initError != null) {
+      return MaterialApp(
+        home: Scaffold(
+          appBar: AppBar(title: const Text('Initialization Error')),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Text(initError!, style: const TextStyle(color: Colors.red)),
+          ),
+        ),
+      );
+    }
+
     return MaterialApp(
       theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
       home: const Navigation(),
@@ -546,82 +600,110 @@ class _MapPageState extends State<MapPage> {
 //       _markers.add(newMarker);
 //     }
 //   }
+// Future<void> _addMarkers() async {
+//   final data = await Supabase.instance.client
+//       .from('items')
+//       .select();
+
+//   for (var item in data) {
+//     final lat = item['location_lat'];
+//     final lng = item['location_lng'];
+
+//     // Skip invalid coordinates
+//     if (lat == null || lng == null) {
+//       print('Skipping item with null coords: ${item['id']}');
+//       continue;
+//     }
+
+//     double latitude;
+//     double longitude;
+
+//     try {
+//       latitude = (lat as num).toDouble();
+//       longitude = (lng as num).toDouble();
+//     } catch (e) {
+//       SnackBar(content: Text('Invalid coordinates for item ${item['id']}'));
+//       continue;
+//     }
+
+//     final marker = Marker(
+//       markerId: MarkerId(item['id'].toString()),
+//       position: LatLng(latitude, longitude),
+//       onTap: () {
+//         showModalBottomSheet(
+//           context: context,
+//           builder: (context) {
+//             return SizedBox.expand(
+//               child: Column(
+//                 children: [
+//                   Padding(
+//                     padding: const EdgeInsets.all(16.0),
+//                     child: Row(
+//                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                       children: [
+//                         Text(
+//                           item['title'] ?? 'Untitled',
+//                           style: DefaultTextStyle.of(context)
+//                               .style
+//                               .apply(fontSizeFactor: 1.6),
+//                         ),
+//                         IconButton(
+//                           icon: const Icon(Icons.close),
+//                           onPressed: () => Navigator.pop(context),
+//                         ),
+//                       ],
+//                     ),
+//                   ),
+//                   if (item['image_url'] != null)
+//                     Image.network(
+//                       item['image_url'],
+//                       height: 200,
+//                       width: 200,
+//                     ),
+//                   Padding(
+//                     padding: const EdgeInsets.all(12.0),
+//                     child: Text(item['description'] ?? ''),
+//                   ),
+//                 ],
+//               ),
+//             );
+//           },
+//         );
+//       },
+//     );
+
+//     _markers.add(marker);
+//   }
+// }
+
 Future<void> _addMarkers() async {
-  final data = await Supabase.instance.client
-      .from('items')
-      .select();
+  try {
+    final data = await Supabase.instance.client.from('items').select();
+    
+    // Clear existing to avoid duplicates if called twice
+    _markers.clear(); 
 
-  for (var item in data) {
-    final lat = item['location_lat'];
-    final lng = item['location_lng'];
+    for (var item in data) {
+      final lat = item['location_lat'];
+      final lng = item['location_lng'];
 
-    // Skip invalid coordinates
-    if (lat == null || lng == null) {
-      print('Skipping item with null coords: ${item['id']}');
-      continue;
+      if (lat == null || lng == null) continue;
+
+      _markers.add(
+        Marker(
+          markerId: MarkerId(item['id'].toString()),
+          position: LatLng((lat as num).toDouble(), (lng as num).toDouble()),
+          // ... your onTap logic
+        ),
+      );
     }
-
-    double latitude;
-    double longitude;
-
-    try {
-      latitude = (lat as num).toDouble();
-      longitude = (lng as num).toDouble();
-    } catch (e) {
-      SnackBar(content: Text('Invalid coordinates for item ${item['id']}'));
-      continue;
-    }
-
-    final marker = Marker(
-      markerId: MarkerId(item['id'].toString()),
-      position: LatLng(latitude, longitude),
-      onTap: () {
-        showModalBottomSheet(
-          context: context,
-          builder: (context) {
-            return SizedBox.expand(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          item['title'] ?? 'Untitled',
-                          style: DefaultTextStyle.of(context)
-                              .style
-                              .apply(fontSizeFactor: 1.6),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (item['image_url'] != null)
-                    Image.network(
-                      item['image_url'],
-                      height: 200,
-                      width: 200,
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(item['description'] ?? ''),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    _markers.add(marker);
+    // Force a rebuild once markers are processed
+    if (mounted) setState(() {}); 
+  } catch (e) {
+    print("Map Error: $e"); // Check your console for this!
+    rethrow;
   }
 }
-
 
   @override
   Widget build(BuildContext context) {
