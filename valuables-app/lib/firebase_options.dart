@@ -54,20 +54,20 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCa8tDGh2F88DijgUBnRA5_KRuxaLaBMh4',
-    appId: '1:250142855053:android:291407e4299d632434f7c4',
+    apiKey: 'AIzaSyB8LCRnzE_1tiTQQ5cEeWQO2pdlTx-LWBg',
+    appId: '1:250142855053:android:4f7012cda1d0348634f7c4',
     messagingSenderId: '250142855053',
     projectId: 'valuables-79a68',
     storageBucket: 'valuables-79a68.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBkcJT6LVExQgGsUooM7k-fHWadZHnUBqA',
-    appId: '1:250142855053:ios:c64ea532b822db9f34f7c4',
+    apiKey: 'AIzaSyDZ8wQSaoHFV0UU_cqNAopKOEfE6AJuVww',
+    appId: '1:250142855053:ios:d1384addbbb3f88934f7c4',
     messagingSenderId: '250142855053',
     projectId: 'valuables-79a68',
     storageBucket: 'valuables-79a68.firebasestorage.app',
-    iosBundleId: 'com.example.valuables',
+    iosBundleId: 'com.valuables.valuables',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
