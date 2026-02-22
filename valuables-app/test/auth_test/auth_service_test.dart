@@ -255,7 +255,7 @@ void main() {
     when(() => mockAuthClient.currentUser).thenReturn(mockUser);
 
     // 3. Stub the sign-out methods
-    when(() => mockGoogleSignIn.signOut()).thenAnswer((_) async => null);
+    when(() => mockGoogleSignIn.signOut()).thenAnswer((_) async => {});
     when(() => mockAuthClient.signOut()).thenAnswer((_) async {});
 
     // Act
