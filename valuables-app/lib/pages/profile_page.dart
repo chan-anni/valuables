@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/theme_controller.dart';
@@ -12,20 +13,43 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   bool _isLoggedIn = false;
+  late final StreamSubscription<AuthState> _authSubscription;
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _isLoggedIn = _supabase.auth.currentUser != null;
+    
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((data) {
+      final bool loggedIn = data.session != null;
+      if (loggedIn != _isLoggedIn) {
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = loggedIn;
+          });
+          if (!loggedIn) {
+            // Switch to the first tab (Sign In) if logged out
+            _tabController.animateTo(0);
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: const Text('Account'),
           actions: [
@@ -37,6 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ],
           bottom: TabBar(
+            controller: _tabController,
             tabs: [
               Tab(text: _isLoggedIn ? 'Account Info' : 'Sign In'),
               const Tab(text: 'Settings'),
@@ -46,12 +71,12 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         body: TabBarView(
+          controller: _tabController,
           children: [
             _isLoggedIn ? const _AccountInfoTab() : const _LoginSignUpTab(),
-            const _SettingsTab(),
+            _SettingsTab(),
           ],
         ),
-      ),
     );
   }
 }
@@ -173,6 +198,11 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   @override
   Widget build(BuildContext context) {
     final user = _supabase.auth.currentUser;
+
+    if (user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final primaryColor = Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
@@ -191,7 +221,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: primaryColor,
+                    color: isDark ? Colors.white : primaryColor,
                   ),
                 ),
               ),
@@ -211,8 +241,8 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                     child: OutlinedButton(
                       onPressed: () => setState(() => _isEditing = true),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryColor,
-                        side: BorderSide(color: primaryColor),
+                        foregroundColor: isDark ? Colors.white : primaryColor,
+                        side: BorderSide(color: isDark ? Colors.white : primaryColor),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -298,7 +328,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                   padding: const EdgeInsets.all(20),
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[900] : Colors.grey.shade100,
+                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -335,7 +365,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                   padding: const EdgeInsets.all(20),
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.grey[900] : Colors.grey.shade100,
+                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -452,9 +482,9 @@ class _ItemCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: isDark ? const Color(0xFF252525) : Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+        border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
       ),
       child: Row(
         children: [
@@ -524,23 +554,7 @@ class _LoginSignUpTabState extends State<_LoginSignUpTab> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          TabBar(
-            onTap: (index) => setState(() => _selectedTab = index),
-            tabs: const [
-              Tab(text: 'Sign In'),
-              Tab(text: 'Sign Up'),
-            ],
-          ),
-          Expanded(
-            child: _selectedTab == 0 ? const _LoginForm() : const _SignUpForm(),
-          ),
-        ],
-      ),
-    );
+    return const _LoginForm();
   }
 }
 
@@ -563,9 +577,6 @@ class _LoginFormState extends State<_LoginForm> {
         email: _emailController.text,
         password: _passwordController.text,
       );
-      if (mounted) {
-        Navigator.pop(context);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -579,56 +590,74 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.lock_person, size: 64, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 16),
-          const Text('Welcome Back', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 32),
-          TextField(
-            controller: _emailController,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              prefixIcon: const Icon(Icons.email),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _passwordController,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              prefixIcon: const Icon(Icons.lock),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.secondary,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Welcome Back', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Sign In'),
-            ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('Sign In'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(title: const Text('Sign Up')),
+                        body: const _SignUpForm(),
+                      ),
+                    ),
+                  );
+                },
+                child: Text("Don't have an account? Sign Up", style: TextStyle(color: isDark ? Colors.white : null)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -672,6 +701,7 @@ class _SignUpFormState extends State<_SignUpForm> {
             content: Text('Sign up successful! Please verify your email.'),
           ),
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -686,13 +716,14 @@ class _SignUpFormState extends State<_SignUpForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_add, size: 64, color: Theme.of(context).colorScheme.primary),
+            Icon(Icons.person_add, size: 64, color: isDark ? Colors.white : Theme.of(context).colorScheme.primary),
             const SizedBox(height: 16),
             const Text('Create Account', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
             const SizedBox(height: 32),
@@ -784,11 +815,11 @@ class _SettingsTab extends StatefulWidget {
 class _SettingsTabState extends State<_SettingsTab> {
   bool _notificationsEnabled = true;
   bool _privacyEnabled = true;
-  bool _darkMode = false;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = _supabase.auth.currentUser;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -820,13 +851,16 @@ class _SettingsTabState extends State<_SettingsTab> {
             const SizedBox(height: 12),
             ListTile(
               title: const Text('Appearance'),
-              subtitle: Text(_darkMode ? 'Dark Mode' : 'Light Mode'),
-              trailing: Switch(
-                value: _darkMode,
-                onChanged: (value) {
-                setState(() => _darkMode = value);
-                themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
-              },
+              subtitle: ValueListenableBuilder<ThemeMode>(
+                valueListenable: themeNotifier,
+                builder: (context, mode, _) => Text(mode == ThemeMode.dark ? 'Dark Mode' : 'Light Mode'),
+              ),
+              trailing: ValueListenableBuilder<ThemeMode>(
+                valueListenable: themeNotifier,
+                builder: (context, mode, _) => Switch(
+                  value: mode == ThemeMode.dark,
+                  onChanged: (value) => themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -838,7 +872,7 @@ class _SettingsTabState extends State<_SettingsTab> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey[900] : Colors.grey.shade100,
+                color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -847,13 +881,11 @@ class _SettingsTabState extends State<_SettingsTab> {
               ),
             ),
             const SizedBox(height: 24),
+            if (user != null)
             Center(
               child: TextButton(
                 onPressed: () async {
-                  final navigator = Navigator.of(context);
                   await _supabase.auth.signOut();
-                  if (!mounted) return;
-                  navigator.popUntil((route) => route.isFirst);
                 },
                 child: const Text(
                   'Sign Out',

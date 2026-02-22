@@ -70,8 +70,8 @@ class MyApp extends StatelessWidget {
     final darkTheme = ThemeData(
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor, brightness: Brightness.dark),
-      scaffoldBackgroundColor: const Color(0xFF121212), // Dark Gray
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF121212), foregroundColor: Colors.white, elevation: 0),
+      scaffoldBackgroundColor: const Color(0xFF1E1E1E), // Dark Gray
+      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF1E1E1E), foregroundColor: Colors.white, elevation: 0),
       useMaterial3: true,
       cardColor: const Color(0xFF1E1E1E),
     );
@@ -181,8 +181,8 @@ class _NavigationState extends State<Navigation> {
                   ),
                   // unread badge placeholder
                   Positioned(
-                    right: 6,
-                    top: 8,
+                    right: 12,
+                    top: 2,
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
@@ -229,13 +229,14 @@ class _NavigationState extends State<Navigation> {
   }
 
   void _showLoginPrompt() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Sign in required'),
         content: const Text('You must be signed in to access this feature.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : null))),
           FilledButton(
             onPressed: () { 
               Navigator.pop(context); 
@@ -290,7 +291,7 @@ class _NavigationState extends State<Navigation> {
                             color: isDark ? Colors.grey[800] : Colors.grey[200],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.primary, size: 32),
+                          child: Icon(Icons.help_outline, color: isDark ? Colors.white : Theme.of(context).colorScheme.primary, size: 32),
                         ),
                         const SizedBox(width: 16),
                         const Text('Report Lost Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
@@ -322,7 +323,7 @@ class _NavigationState extends State<Navigation> {
                             color: isDark ? Colors.grey[800] : Colors.grey[200],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.location_on, color: Theme.of(context).colorScheme.secondary, size: 32),
+                          child: Icon(Icons.location_on, color: isDark ? Colors.white : Theme.of(context).colorScheme.secondary, size: 32),
                         ),
                         const SizedBox(width: 16),
                         const Text('Report Found Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
