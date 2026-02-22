@@ -60,7 +60,14 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           TextField(controller: _emailController),
           TextField(controller: _passwordController, obscureText: true),
-          ElevatedButton(onPressed: login, child: const Text("Login")),
+          ElevatedButton(
+            onPressed: login, 
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text("Login")
+          ),
           GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -72,6 +79,10 @@ class _LoginPageState extends State<LoginPage> {
           ),
           ElevatedButton(
             onPressed: loginWithGoogle,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
             child: const Text("Login with Google"),
           ),
         ],
