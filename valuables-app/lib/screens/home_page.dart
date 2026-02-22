@@ -192,9 +192,9 @@ class _ItemCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12.0),
         padding: const EdgeInsets.all(12.0),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          color: isDark ? const Color(0xFF252525) : Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+          border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
         ),
         child: Row(
           children: [
