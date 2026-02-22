@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
+import "package:valuables/auth/auth_service.dart";
 
 class MyCustomForm extends StatefulWidget {
   const MyCustomForm({super.key});
@@ -11,6 +12,7 @@ class MyCustomForm extends StatefulWidget {
 }
 
 class MyCustomFormState extends State<MyCustomForm> {
+  final authService = AuthService();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController textController = TextEditingController();
 
@@ -29,6 +31,11 @@ class MyCustomFormState extends State<MyCustomForm> {
           })
           .select('id')
           .single();
+
+      await Supabase.instance.client.from("chat_room_member").insert({
+        "chat_room_id": data['id'],
+        "member_id": authService.getCurrentUserSession()?.user.id,
+      });
 
       debugPrint("Room created with ID: ${data['id']}");
       return data;
