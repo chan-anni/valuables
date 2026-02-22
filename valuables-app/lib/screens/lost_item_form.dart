@@ -7,8 +7,9 @@ import 'map_picker_screen.dart';
 
 class LostItemForm extends StatefulWidget {
   final SupabaseClient? supabaseClient;
+  final String? forceType;
   
-  const LostItemForm({super.key, this.supabaseClient});
+  const LostItemForm({super.key, this.supabaseClient, this.forceType});
 
   @override
   State<LostItemForm> createState() => _LostItemFormState();
@@ -53,14 +54,23 @@ class _LostItemFormState extends State<LostItemForm> {
     super.initState();
     // Initialize Supabase client - can be injected for testing
     _supabase = widget.supabaseClient;
+    if (widget.forceType != null) {
+      _selectedType = widget.forceType!;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final secondaryColor = Theme.of(context).colorScheme.secondary;
+    final isLost = _selectedType == 'lost';
+    final themeColor = isLost ? primaryColor : secondaryColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Report Item', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
       ),
@@ -72,6 +82,7 @@ class _LostItemFormState extends State<LostItemForm> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   // Type selector
+                  if (widget.forceType == null)
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -91,12 +102,12 @@ class _LostItemFormState extends State<LostItemForm> {
                               ButtonSegment(
                                 value: 'lost',
                                 label: Text('Lost'),
-                                icon: Icon(Icons.search),
+                                icon: Icon(Icons.help_outline),
                               ),
                               ButtonSegment(
                                 value: 'found',
                                 label: Text('Found'),
-                                icon: Icon(Icons.check_circle),
+                                icon: Icon(Icons.location_on),
                               ),
                             ],
                             selected: {_selectedType},
@@ -110,17 +121,32 @@ class _LostItemFormState extends State<LostItemForm> {
                       ),
                     ),
                   ),
+                  if (widget.forceType != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      alignment: Alignment.center,
+                      child: Text(
+                        'Reporting ${widget.forceType == 'lost' ? 'Lost' : 'Found'} Item',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
                   
                   const SizedBox(height: 16),
                   
                   // Title
                   TextFormField(
                     controller: _titleController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Item Title *',
                       hintText: 'e.g., Black iPhone 14 Pro',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.title),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.title),
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -134,10 +160,12 @@ class _LostItemFormState extends State<LostItemForm> {
                   
                   // Category
                   DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Category *',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.category),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.category),
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
                     ),
                     initialValue: _selectedCategory,
                     items: _categories.map((category) {
@@ -164,12 +192,14 @@ class _LostItemFormState extends State<LostItemForm> {
                   // Description
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Description *',
                       hintText: 'Provide detailed information...',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.description),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.description),
                       alignLabelWithHint: true,
+                      filled: true,
+                      fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
                     ),
                     maxLines: 5,
                     validator: (value) {
@@ -184,6 +214,7 @@ class _LostItemFormState extends State<LostItemForm> {
                   
                   // Date picker
                   Card(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
                     child: ListTile(
                       leading: const Icon(Icons.calendar_today),
                       title: Text(_selectedType == 'lost' ? 'Date Lost *' : 'Date Found *'),
@@ -202,6 +233,7 @@ class _LostItemFormState extends State<LostItemForm> {
                   
                   // Location picker
                   Card(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
                     child: ListTile(
                       leading: const Icon(Icons.location_on),
                       title: const Text('Location'),
@@ -217,6 +249,7 @@ class _LostItemFormState extends State<LostItemForm> {
                   
                   // Image upload
                   Card(
+                    color: isDark ? Colors.grey[800] : Colors.grey[200],
                     child: Column(
                       children: [
                         ListTile(
@@ -273,11 +306,11 @@ class _LostItemFormState extends State<LostItemForm> {
                     onPressed: _submitForm,
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: Colors.green,
+                      backgroundColor: themeColor,
                     ),
-                    child: const Text(
+                    child: Text(
                       'Submit Report',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
+                      style: TextStyle(fontSize: 18, color: isLost ? Colors.white : Colors.black),
                     ),
                   ),
                 ],

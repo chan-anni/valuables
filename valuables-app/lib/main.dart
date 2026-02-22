@@ -2,40 +2,94 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:valuables/auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'home_page.dart';
-import "package:google_sign_in/google_sign_in.dart";
+import 'screens/home_page.dart';
+import 'package:valuables/pages/profile_page.dart';
+import 'package:valuables/pages/history_page.dart';
 import 'package:valuables/screens/lost_item_form.dart';
+import 'package:valuables/theme_controller.dart';
+// Global flag: track if Supabase is initialized
+bool _supabaseInitialized = false;
+// Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
+  // Load .env and initialize Supabase in the background (non-blocking).
+  await _initializeAsync();
 
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
-
-  await GoogleSignIn.instance.initialize(
-    clientId: dotenv.env['GOOGLE_CLIENT_ID']!,
-    serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID']!,
-  );
-
+  // Start the UI immediately.
   runApp(MyApp());
 }
 
-final _supabase = Supabase.instance.client;
+Future<void> _initializeAsync() async {
+  try {
+    print('_initializeAsync: loading .env');
+    await dotenv.load(fileName: '.env');
+    print('_initializeAsync: .env loaded');
+  } catch (e) {
+    print('_initializeAsync: dotenv.load failed: $e');
+  }
+
+  try {
+    final url = dotenv.env['SUPABASE_URL'];
+    final key = dotenv.env['SUPABASE_ANON_KEY'];
+    if (url != null && key != null) {
+      print('_initializeAsync: initializing Supabase');
+      try {
+        // Use a timeout to prevent hanging.
+        await Supabase.initialize(url: url, anonKey: key).timeout(const Duration(seconds: 10));
+        _supabaseInitialized = true;
+        print('_initializeAsync: Supabase initialized successfully');
+      } on TimeoutException catch (e) {
+        print('_initializeAsync: Supabase.initialize timed out: $e');
+        _supabaseInitialized = false;
+      }
+    } else {
+      print('_initializeAsync: Supabase env vars missing; skipping initialize');
+    }
+  } catch (e) {
+    print('_initializeAsync: Supabase.initialize failed: $e');
+    _supabaseInitialized = false;
+  }
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
-      home: const Navigation(),
+    const Color deepPurple = Color(0xFF5E2B8A);
+    const Color goldColor = Color(0xFFFBC02D); // Darker yellow for contrast
+    final lightTheme = ThemeData(
+      colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor),
+      scaffoldBackgroundColor: Colors.white,
+      appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
+      useMaterial3: true,
+    );
+    final darkTheme = ThemeData(
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor, brightness: Brightness.dark),
+      scaffoldBackgroundColor: const Color(0xFF121212), // Dark Gray
+      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF121212), foregroundColor: Colors.white, elevation: 0),
+      useMaterial3: true,
+      cardColor: const Color(0xFF1E1E1E),
+    );
+
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: mode,
+          home: const Navigation(),
+          routes: {
+            '/account': (context) => const ProfilePage(),
+            '/history': (context) => const HistoryPage(),
+          },
+        );
+      },
     );
   }
 }
@@ -56,400 +110,235 @@ class _NavigationState extends State<Navigation> {
     });
   }
 
+  // pages left->right: Map, Listings, (center FAB), Messages, Account
   late final List<Widget> pages = [
-    HomePage(onBrowsePressed: () => setPageIndex(1)),
     const MapPage(),
+    const HomePage(),
+    const SizedBox.shrink(), // placeholder for center FAB
     const MessagePage(),
-    const AuthGate(),
+    const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.green,
-        title: const Text('Valuables', style: TextStyle(color: Colors.white)),
-      ),
-
-      bottomNavigationBar: NavigationBar(
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.map), label: 'Map'),
-          NavigationDestination(icon: Icon(Icons.message), label: 'Messages'),
-          NavigationDestination(
-            icon: Icon(Icons.account_circle),
-            label: 'Profile',
-          ),
-        ],
-        onDestinationSelected: (int index) {
-          setPageIndex(index);
-        },
-        selectedIndex: currentPageIndex,
+        title: const Text('Valuables'),
       ),
       body: pages[currentPageIndex],
-    );
-  }
-}
-
-class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
-
-  @override
-  State<HistoryPage> createState() => _HistoryPageState();
-}
-
-class _HistoryPageState extends State<HistoryPage> {
-  List<dynamic> _lostReports = [];
-  List<dynamic> _foundReports = [];
-  String _searchQuery = '';
-  bool _isLoading = true;
-  String? _historyError;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadHistory();
-  }
-
-  Future<void> _loadHistory() async {
-    try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId != null) {
-        final lost = await _supabase
-            .from('items')
-            .select()
-            .eq('user_id', userId)
-            .eq('item_type', 'lost')
-            .order('created_at', ascending: false);
-
-        final found = await _supabase
-            .from('items')
-            .select()
-            .eq('user_id', userId)
-            .eq('item_type', 'found')
-            .order('created_at', ascending: false);
-
-        // Sort both with unclaimed at top, then claimed at bottom
-        _sortItems(lost);
-        _sortItems(found);
-
-        setState(() {
-          _lostReports = lost;
-          _foundReports = found;
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _historyError = 'Failed to load activity: ${e.toString()}';
-      });
-    }
-  }
-
-  void _sortItems(List<dynamic> items) {
-    items.sort((a, b) {
-      final aClaimed = (a['status'] == 'claimed' || a['status'] == 'found');
-      final bClaimed = (b['status'] == 'claimed' || b['status'] == 'found');
-      if (aClaimed != bClaimed) return aClaimed ? 1 : -1;
-      final aDate =
-          DateTime.tryParse(a['created_at']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      final bDate =
-          DateTime.tryParse(b['created_at']?.toString() ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0);
-      return bDate.compareTo(aDate);
-    });
-  }
-
-  List<dynamic> _filterItems(List<dynamic> items) {
-    return items.where((item) {
-      final title = (item['title'] ?? '').toString().toLowerCase();
-      final category = (item['category'] ?? '').toString().toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return title.contains(query) || category.contains(query);
-    }).toList();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Your Activity')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_historyError != null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          border: Border.all(color: Colors.red.shade200),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _historyError!,
-                                style: TextStyle(color: Colors.red.shade800),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.close,
-                                size: 20,
-                                color: Colors.red,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _historyError = null),
-                              padding: EdgeInsets.zero,
-                            ),
-                          ],
-                        ),
-                      ),
-                    TextField(
-                      onChanged: (value) =>
-                          setState(() => _searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search your reports...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Lost Reports Section
-                    _buildHistorySection(
-                      title: 'Lost Reports',
-                      subtitle: 'Items not yet found at bottom',
-                      icon: Icons.search,
-                      color: Colors.red,
-                      items: _filterItems(_lostReports),
-                      allowDelete: true,
-                    ),
-                    const SizedBox(height: 24),
-                    // Found Reports Section
-                    _buildHistorySection(
-                      title: 'Found Reports',
-                      subtitle: 'Items not yet claimed at bottom',
-                      icon: Icons.check_circle,
-                      color: Colors.green,
-                      items: _filterItems(_foundReports),
-                      allowDelete: false,
-                    ),
-                  ],
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+        notchMargin: 8.0,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        elevation: 10,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // Map
+              _buildNavItem(
+                context,
+                icon: Icons.pin_drop_rounded,
+                index: 0,
+              ),
+              // Listings
+              _buildNavItem(
+                context,
+                icon: Icons.format_list_bulleted_rounded,
+                index: 1,
+              ),
+              // Center + Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: FloatingActionButton(
+                  onPressed: _onCreatePressed,
+                  backgroundColor: colorScheme.primary,
+                  elevation: 4,
+                  shape: const CircleBorder(),
+                  child: const Icon(Icons.add_rounded, size: 36, color: Colors.white),
                 ),
               ),
-            ),
-    );
-  }
-
-  Widget _buildHistorySection({
-    required String title,
-    String? subtitle,
-    required IconData icon,
-    required Color color,
-    required List<dynamic> items,
-    required bool allowDelete,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              // Messages (with badge placeholder)
+              Stack(
+                alignment: Alignment.topRight,
+                children: [
+                  _buildNavItem(
+                    context,
+                    icon: Icons.chat_bubble_rounded,
+                    index: 3,
+                    onTap: () {
+                      // Auth guard for messages
+                      if (Supabase.instance.client.auth.currentUser == null) {
+                        _showLoginPrompt();
+                      } else {
+                        setPageIndex(3);
+                      }
+                    }
                   ),
-                ),
-                if (subtitle != null)
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  // unread badge placeholder
+                  Positioned(
+                    right: 6,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
+                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                      child: const Text('2', style: TextStyle(color: Colors.white, fontSize: 10), textAlign: TextAlign.center),
+                    ),
                   ),
-              ],
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(12),
+                ],
               ),
-              child: Text(
-                '${items.length}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
+              // Account/Profile
+              _buildNavItem(
+                context,
+                icon: Icons.person_rounded,
+                index: 4,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        if (items.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                'No ${title.toLowerCase()} yet',
-                style: TextStyle(color: Colors.grey.shade600),
-              ),
-            ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: items.length,
-            itemBuilder: (context, index) =>
-                _buildHistoryItem(items[index], allowDelete),
-          ),
-      ],
+      ),
     );
   }
 
-  Widget _buildHistoryItem(dynamic item, bool allowDelete) {
-    final itemType = item['item_type']?.toString().toUpperCase() ?? 'UNKNOWN';
-    final isLost = itemType == 'LOST';
-    final hasImage =
-        item['image_url'] != null && item['image_url'].toString().isNotEmpty;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+  Widget _buildNavItem(BuildContext context, {required IconData icon, required int index, VoidCallback? onTap}) {
+    final isSelected = currentPageIndex == index;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return InkWell(
+      onTap: onTap ?? () => setPageIndex(index),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? (isDark ? Colors.grey[800] : colorScheme.primary.withOpacity(0.15)) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Icon(
+          icon,
+          size: 28,
+          color: isSelected ? (isDark ? Colors.grey[300] : colorScheme.primary) : Colors.grey,
+        ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isLost ? Colors.red.shade100 : Colors.green.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: hasImage
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      item['image_url'] as String,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          isLost ? Icons.search : Icons.check_circle,
-                          color: isLost ? Colors.red : Colors.green,
-                        );
-                      },
-                    ),
-                  )
-                : Icon(
-                    isLost ? Icons.search : Icons.check_circle,
-                    color: isLost ? Colors.red : Colors.green,
-                  ),
+    );
+  }
+
+  void _showLoginPrompt() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign in required'),
+        content: const Text('You must be signed in to access this feature.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () { 
+              Navigator.pop(context); 
+              setPageIndex(4); // Go to profile/login
+            }, 
+            child: const Text('Sign in')
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['title'] ?? 'Untitled',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item['category'] ?? 'Uncategorized',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatDate(item['created_at']),
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-          ),
-          if (allowDelete)
-            IconButton(
-              icon: const Icon(
-                Icons.delete_outline,
-                size: 20,
-                color: Colors.grey,
-              ),
-              onPressed: () => _deleteItem(item['id']),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: 'Delete report',
-            ),
         ],
       ),
     );
   }
 
-  Future<void> _deleteItem(String itemId) async {
-    try {
-      await _supabase.from('items').delete().eq('id', itemId);
-      await _loadHistory();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Report deleted')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error deleting report: $e')));
-      }
+  void _onCreatePressed() {
+    // If user not logged in, prompt to login first
+    final client = Supabase.instance.client;
+    final user = client.auth.currentUser;
+    if (user == null) {
+      _showLoginPrompt();
+      return;
     }
-  }
 
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'Unknown date';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.month}/${date.day}/${date.year}';
-    } catch (e) {
-      return 'Unknown date';
-    }
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24.0),
+                child: Text('What would you like to report?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LostItemForm(forceType: 'lost')));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey[200],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.primary, size: 32),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text('Report Lost Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LostItemForm(forceType: 'found')));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey[200],
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.location_on, color: Theme.of(context).colorScheme.secondary, size: 32),
+                        ),
+                        const SizedBox(width: 16),
+                        const Text('Report Found Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Spacer(),
+                        const Icon(Icons.chevron_right, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -462,8 +351,7 @@ class MapPage extends StatefulWidget {
 
 // Map page -- needs API key
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller =
-      Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   Future<void>? _addMarkersFuture;
 
   @override
@@ -474,71 +362,39 @@ class _MapPageState extends State<MapPage> {
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746,
-  );
+    zoom: 14.4746
+    );
 
-  final Set<Marker> _markers = <Marker>{};
+  // Test dummy markers
+  final Set<Marker> _markers = <Marker>{
+    Marker(
+      markerId: MarkerId('1'), 
+      position: LatLng(46.65428653800135, -122.30802267054545)
+      ),
+    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
+  };
 
- Future<void> _addMarkers() async {
+  Future<void> _addMarkers() async {
+    if (!_supabaseInitialized) return;
 
-    final data = await Supabase.instance.client
-    .from('items')
-    .select();
+    try {
+      final data = await Supabase.instance.client.from('items').select();
 
-    for (var item in data) {
-      Marker newMarker = Marker(
-        markerId: MarkerId(item['id']),
-        position: LatLng(item['location_lat'], item['location_lng']),
-        onTap: () {
-          showModalBottomSheet(context: context, 
-          builder: (BuildContext context){
-            return SizedBox.expand(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(item['title'],
-                          style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                          textAlign: TextAlign.left,
-                          ),
-                          ElevatedButton(
-                            child: Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Image.network(item['image_url'], height: 200, width: 200),
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Text(item['description']),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const LostItemForm()),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Submit Claim'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+      for (var item in data) {
+        final id = item['id']?.toString() ?? 'unknown';
+        final lat = (item['location_lat'] as num?)?.toDouble();
+        final lng = (item['location_lng'] as num?)?.toDouble();
+
+        if (lat != null && lng != null) {
+          Marker newMarker = Marker(
+            markerId: MarkerId(id),
+            position: LatLng(lat, lng),
           );
+          _markers.add(newMarker);
         }
-      );
-      _markers.add(newMarker);
+      }
+    } catch (e) {
+      print('Error loading markers: $e');
     }
   }
 
@@ -546,27 +402,28 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder(
-        future: _addMarkersFuture,
+        future: _addMarkersFuture, 
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            ); // Show loading spinner while markers load
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            ); // Display error if marker loading fails
-          } else {
-            return GoogleMap(
-              initialCameraPosition: startPos,
-              markers: _markers,
-              onMapCreated: (GoogleMapController controller) {
-                _controller.complete(controller);
-              },
-            );
-          }
-        },
-      ),
+              return const Center(
+                  child:
+                      CircularProgressIndicator()); // Show loading spinner while markers load
+            } else if (snapshot.hasError) {
+              return Center(
+                  child: Text(
+                      'Error: ${snapshot.error}')); // Display error if marker loading fails
+            } else {
+              return GoogleMap(
+                initialCameraPosition: startPos,
+                markers: _markers,
+                onMapCreated: (GoogleMapController controller) {
+                  _controller.complete(controller);
+                },
+              );
+            }
+        }
+        
+        ),
     );
   }
 }
