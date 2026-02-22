@@ -214,7 +214,7 @@ class _NavigationState extends State<Navigation> {
       onTap: onTap ?? () => setPageIndex(index),
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? (isDark ? Colors.grey[800] : colorScheme.primary.withOpacity(0.15)) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
