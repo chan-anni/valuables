@@ -24,6 +24,16 @@ class AuthService {
   }) : _supabase = supabase,
        _googleSignIn = googleSignIn;
 
+  /// Getter for the GoogleSignIn client, used for testing purposes
+  GoogleSignIn get getGoogleSignInClient {
+    return _googleSignIn;
+  }
+
+  /// Getter for the Supabase client, used for testing purposes
+  SupabaseClient get getSupabaseClient {
+    return _supabase;
+  }
+
   /// Sign in with personal email and password
   ///
   /// @param email The user's email
@@ -89,7 +99,7 @@ class AuthService {
         user?.identities?.any((i) => i.provider == 'google') == true;
 
     if (isGoogle) {
-      await GoogleSignIn.instance.signOut();
+      await _googleSignIn.signOut();
     }
     await _supabase.auth.signOut();
   }
