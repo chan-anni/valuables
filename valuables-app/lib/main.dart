@@ -4,7 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'home_page.dart';
+import 'package:valuables/pages/chat_page.dart';
+import 'pages/home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
 import 'package:valuables/screens/lost_item_form.dart';
 
@@ -59,7 +60,7 @@ class _NavigationState extends State<Navigation> {
   late final List<Widget> pages = [
     HomePage(onBrowsePressed: () => setPageIndex(1)),
     const MapPage(),
-    const MessagePage(),
+    const ChatPage(),
     const AuthGate(),
   ];
 
@@ -479,20 +480,18 @@ class _MapPageState extends State<MapPage> {
 
   final Set<Marker> _markers = <Marker>{};
 
- Future<void> _addMarkers() async {
-
-    final data = await Supabase.instance.client
-    .from('items')
-    .select();
+  Future<void> _addMarkers() async {
+    final data = await Supabase.instance.client.from('items').select();
 
     for (var item in data) {
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
         position: LatLng(item['location_lat'], item['location_lng']),
         onTap: () {
-          showModalBottomSheet(context: context, 
-          builder: (BuildContext context){
-            return SizedBox.expand(
+          showModalBottomSheet(
+            context: context,
+            builder: (BuildContext context) {
+              return SizedBox.expand(
                 child: Column(
                   children: [
                     Padding(
@@ -500,9 +499,12 @@ class _MapPageState extends State<MapPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(item['title'],
-                          style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                          textAlign: TextAlign.left,
+                          Text(
+                            item['title'],
+                            style: DefaultTextStyle.of(
+                              context,
+                            ).style.apply(fontSizeFactor: 1.6),
+                            textAlign: TextAlign.left,
                           ),
                           ElevatedButton(
                             child: Icon(Icons.close),
@@ -520,13 +522,18 @@ class _MapPageState extends State<MapPage> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const LostItemForm()),
+                          MaterialPageRoute(
+                            builder: (context) => const LostItemForm(),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.add),
                       label: const Text('Submit Claim'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                       ),
@@ -534,9 +541,9 @@ class _MapPageState extends State<MapPage> {
                   ],
                 ),
               );
-            }
+            },
           );
-        }
+        },
       );
       _markers.add(newMarker);
     }
@@ -568,14 +575,5 @@ class _MapPageState extends State<MapPage> {
         },
       ),
     );
-  }
-}
-
-class MessagePage extends StatelessWidget {
-  const MessagePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Messages'));
   }
 }
