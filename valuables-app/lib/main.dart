@@ -4,10 +4,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:valuables/auth/auth_service.dart';
+import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
 import 'pages/home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
-import 'package:valuables/screens/lost_item_form.dart';
+import 'package:get_it/get_it.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,10 +26,20 @@ Future<void> main() async {
     serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID']!,
   );
 
+  setupLocator();
+
   runApp(MyApp());
 }
 
-final _supabase = Supabase.instance.client;
+void setupLocator() {
+  final getIt = GetIt.instance;
+
+  // Register AuthService FIRST if ChatService depends on it
+  getIt.registerLazySingleton<AuthService>(() => AuthService());
+
+  // Register ChatService
+  getIt.registerLazySingleton<ChatService>(() => ChatService());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -114,16 +126,16 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Future<void> _loadHistory() async {
     try {
-      final userId = _supabase.auth.currentUser?.id;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId != null) {
-        final lost = await _supabase
+        final lost = await Supabase.instance.client
             .from('items')
             .select()
             .eq('user_id', userId)
             .eq('item_type', 'lost')
             .order('created_at', ascending: false);
 
-        final found = await _supabase
+        final found = await Supabase.instance.client
             .from('items')
             .select()
             .eq('user_id', userId)
@@ -427,7 +439,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Future<void> _deleteItem(String itemId) async {
     try {
-      await _supabase.from('items').delete().eq('id', itemId);
+      await Supabase.instance.client.from('items').delete().eq('id', itemId);
       await _loadHistory();
       if (mounted) {
         ScaffoldMessenger.of(
@@ -481,9 +493,19 @@ class _MapPageState extends State<MapPage> {
   final Set<Marker> _markers = <Marker>{};
 
   Future<void> _addMarkers() async {
+    // 1. Fetch data
     final data = await Supabase.instance.client.from('items').select();
 
     for (var item in data) {
+      // 2. Safely extract and cast coordinates
+      final double? lat = item['location_lat']?.toDouble();
+      final double? lng = item['location_lng']?.toDouble();
+
+      // 3. Skip this marker if data is missing or corrupted
+      if (lat == null || lng == null) {
+        debugPrint("Skipping item ${item['id']} due to null coordinates");
+        continue;
+      }
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
         position: LatLng(item['location_lat'], item['location_lng']),
@@ -519,14 +541,7 @@ class _MapPageState extends State<MapPage> {
                       child: Text(item['description']),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LostItemForm(),
-                          ),
-                        );
-                      },
+                      onPressed: () => {startClaim(item['id'])},
                       icon: const Icon(Icons.add),
                       label: const Text('Submit Claim'),
                       style: ElevatedButton.styleFrom(
@@ -575,5 +590,59 @@ class _MapPageState extends State<MapPage> {
         },
       ),
     );
+  }
+
+  Future<void> startClaim(String itemId) async {
+    debugPrint("Hello world");
+    final chatService = GetIt.I<ChatService>();
+    final authService = GetIt.I<AuthService>();
+    final supabase = Supabase.instance.client;
+
+    try {
+      debugPrint("Hello world2");
+      // 1. Get the current user (The "Claimer")
+      final currentUser = authService.getCurrentUserSession()?.user;
+      if (currentUser == null) return;
+
+      debugPrint("Current user is ${currentUser.id}");
+      debugPrint("Item id is $itemId");
+
+      // 2. Fetch the Item Holder's ID (The "Owner")
+      // We use .single() because we only expect one owner per item
+      final itemData = await supabase
+          .from("items")
+          .select("user_id")
+          .eq('id', itemId)
+          .single();
+
+      final String ownerId = itemData['user_id'];
+
+      debugPrint("Person who has it is $ownerId");
+      // 3. Create the Room and get the new Room ID
+      // Note: I updated ChatService to return the room ID earlier
+      final room = await chatService.createRoom("Claim for Item $itemId");
+      if (room == null) return;
+
+      final String roomId = room['id'];
+
+      debugPrint("Adding ${currentUser.id} and $ownerId to a new chat room");
+
+      // 4. Add both users to the room
+      // Assuming your addUsersToRoom now accepts a List of IDs or Users
+      await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
+
+      debugPrint("Added");
+
+      // 5. Navigate to the chat
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(builder: (context) => const ChatPage()),
+        );
+      }
+    } catch (e) {
+      debugPrint("Failed to start claim: $e");
+      // Show an error snackbar here if you like
+    }
   }
 }
