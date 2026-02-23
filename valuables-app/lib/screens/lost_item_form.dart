@@ -7,8 +7,12 @@ import 'map_picker_screen.dart';
 
 class LostItemForm extends StatefulWidget {
   final SupabaseClient? supabaseClient;
-  
-  const LostItemForm({super.key, this.supabaseClient});
+  // When true the form will not attempt to use the global Supabase.instance.client.
+  // Enable this in widget tests to keep the form in "test mode" and avoid
+  // initialization of networked clients.
+  final bool testMode;
+
+  const LostItemForm({super.key, this.supabaseClient, this.testMode = false});
 
   @override
   State<LostItemForm> createState() => _LostItemFormState();
@@ -51,8 +55,11 @@ class _LostItemFormState extends State<LostItemForm> {
   @override
   void initState() {
     super.initState();
-    // Initialize Supabase client - can be injected for testing
-    _supabase = widget.supabaseClient;
+    // Initialize Supabase client - can be injected for testing.
+    // If testMode is enabled, avoid falling back to the global client to
+    // keep widget tests isolated.
+    _supabase = widget.supabaseClient ?? (widget.testMode ? null : Supabase.instance.client);
+
   }
 
   @override
