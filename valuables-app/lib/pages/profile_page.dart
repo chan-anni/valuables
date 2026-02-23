@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/theme_controller.dart';
 import 'package:valuables/pages/history_page.dart';
@@ -95,6 +98,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   bool _isLoading = false;
   List<dynamic> _userItems = [];
   List<dynamic> _alertItems = [];
+  File? _imageFile;
 
   @override
   void initState() {
@@ -165,21 +169,98 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    // NOTE: Ensure NSCameraUsageDescription and NSPhotoLibraryUsageDescription are in Info.plist
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Image Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    try {
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        if (!mounted) return;
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        String message = 'Error picking image: ${e.message}';
+        if (e.code == 'camera_access_denied') {
+          message = 'Camera access denied. Please enable it in settings.';
+        } else if (e.code == 'source_not_available') {
+          message = 'Camera not available on this device/simulator.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
+      String? avatarUrl;
+      if (_imageFile != null) {
+        final userId = _supabase.auth.currentUser!.id;
+        final path = 'profiles/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await _supabase.storage.from('items').upload(path, _imageFile!);
+        avatarUrl = _supabase.storage.from('items').getPublicUrl(path);
+      }
+
+      final Map<String, dynamic> updates = {
+        'name': _nameController.text,
+        'username': _usernameController.text,
+      };
+      
+      if (avatarUrl != null) {
+        updates['avatar_url'] = avatarUrl;
+      }
+
       await _supabase.auth.updateUser(
         UserAttributes(
-          data: {
-            'name': _nameController.text,
-            'username': _usernameController.text,
-          },
+          data: updates,
         ),
       );
       if (mounted) {
         setState(() {
           _isEditing = false;
           _isLoading = false;
+          _imageFile = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
@@ -212,18 +293,46 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: primaryColor.withOpacity(0.2),
-                child: Text(
-                  (user?.userMetadata?['name'] as String? ?? 'U')[0]
-                      .toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : primaryColor,
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: primaryColor.withOpacity(0.2),
+                    backgroundImage: _imageFile != null
+                        ? FileImage(_imageFile!)
+                        : (user?.userMetadata?['avatar_url'] != null
+                            ? NetworkImage(user!.userMetadata!['avatar_url'])
+                            : null) as ImageProvider?,
+                    child: (_imageFile == null && user?.userMetadata?['avatar_url'] == null)
+                        ? Text(
+                            (user?.userMetadata?['name'] as String? ?? 'U')[0]
+                                .toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : primaryColor,
+                            ),
+                          )
+                        : null,
                   ),
-                ),
+                  if (_isEditing)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
@@ -297,7 +406,10 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => setState(() => _isEditing = false),
+                          onPressed: () => setState(() {
+                            _isEditing = false;
+                            _imageFile = null;
+                          }),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.black,
                             foregroundColor: Colors.white,

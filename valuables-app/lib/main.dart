@@ -8,15 +8,13 @@ import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
-// Global flag: track if Supabase is initialized
-bool _supabaseInitialized = false;
 // Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load .env and initialize Supabase in the background (non-blocking).
-  await _initializeAsync();
+  _initializeAsync();
 
   // Start the UI immediately.
   runApp(MyApp());
@@ -39,18 +37,18 @@ Future<void> _initializeAsync() async {
       try {
         // Use a timeout to prevent hanging.
         await Supabase.initialize(url: url, anonKey: key).timeout(const Duration(seconds: 10));
-        _supabaseInitialized = true;
+        supabaseInitializedNotifier.value = true;
         print('_initializeAsync: Supabase initialized successfully');
       } on TimeoutException catch (e) {
         print('_initializeAsync: Supabase.initialize timed out: $e');
-        _supabaseInitialized = false;
+        supabaseInitializedNotifier.value = false;
       }
     } else {
       print('_initializeAsync: Supabase env vars missing; skipping initialize');
     }
   } catch (e) {
     print('_initializeAsync: Supabase.initialize failed: $e');
-    _supabaseInitialized = false;
+    supabaseInitializedNotifier.value = false;
   }
 }
 
@@ -376,7 +374,7 @@ class _MapPageState extends State<MapPage> {
   };
 
   Future<void> _addMarkers() async {
-    if (!_supabaseInitialized) return;
+    if (!supabaseInitializedNotifier.value) return;
 
     try {
       final data = await Supabase.instance.client.from('items').select();

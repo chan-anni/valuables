@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valuables/screens/lost_item_form.dart';
+import 'package:valuables/screens/map_picker_screen.dart';
 
-// testing
 void main() {
   group('LostItemForm Basic Tests', () {
     testWidgets('Form renders correctly with all fields', (WidgetTester tester) async {
@@ -151,5 +151,25 @@ void main() {
       expect(find.byType(DatePickerDialog), findsOneWidget);
     });
     
+    testWidgets('Location picker opens when tapped', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: LostItemForm(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      
+      // Scroll to location tile
+      await tester.dragUntilVisible(
+        find.text('Location'),
+        find.byType(ListView),
+        const Offset(0, -200),
+      );
+      await tester.tap(find.text('Location'));
+      await tester.pumpAndSettle();
+      
+      // Verify MapPickerScreen is pushed
+      expect(find.byType(MapPickerScreen), findsOneWidget);
+    });
   });
 }

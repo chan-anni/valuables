@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
@@ -386,18 +387,38 @@ class _LostItemFormState extends State<LostItemForm> {
     
     if (source == null) return;
     
-    final pickedFile = await picker.pickImage(
-      source: source,
-      maxWidth: 1920,
-      maxHeight: 1080,
-      imageQuality: 85,
-    );
-    
-    if (pickedFile != null) {
-      if (!mounted) return;
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+    try {
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (pickedFile != null) {
+        if (!mounted) return;
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        String message = 'Error picking image: ${e.message}';
+        if (e.code == 'camera_access_denied') {
+          message = 'Camera access denied. Please enable it in settings.';
+        } else if (e.code == 'source_not_available') {
+          message = 'Camera not available on this device/simulator.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
     }
   }
 
