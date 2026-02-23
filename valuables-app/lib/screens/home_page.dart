@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:valuables/theme_controller.dart';
 
-// Trivial comment to test the code coverage comments setup
 class HomePage extends StatefulWidget {
   final VoidCallback? onBrowsePressed;
+  final SupabaseClient? supabaseClient;
   
-  const HomePage({super.key, this.onBrowsePressed});
+  const HomePage({super.key, this.onBrowsePressed, this.supabaseClient});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final _supabase = Supabase.instance.client;
+  SupabaseClient? _supabase;
   List<dynamic> _recentItems = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -20,23 +21,49 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
+    
+    // Use injected client or fallback to singleton if initialized
+    try {
+      _supabase = widget.supabaseClient ?? Supabase.instance.client;
+    } catch (e) {
+      _supabase = null;
+    }
+
     // Debug: trace HomePage init
     print('HomePage.initState: start');
-    if (Supabase.instance.client != null) {
+    if (_supabase != null) {
       _loadRecentItems().then((_) => print('HomePage.initState: recent loaded'));
     } else {
       print('HomePage.initState: Supabase not ready, skipping data loads');
+      _isLoading = false;
     }
     print('HomePage.initState: end');
   }
 
+  @override
+  void dispose() {
+    supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
+    super.dispose();
+  }
+
+  void _onSupabaseInitialized() {
+    if (supabaseInitializedNotifier.value && mounted) {
+      setState(() {
+        _supabase = Supabase.instance.client;
+        _isLoading = true;
+      });
+      _loadRecentItems();
+    }
+  }
+
   Future<void> _loadRecentItems() async {
     try {
-      if (Supabase.instance.client == null) {
+      if (_supabase == null) {
         print('_loadRecentItems: Supabase not initialized, skipping load');
         return;
       }
-      dynamic query = _supabase.from('items').select();
+      dynamic query = _supabase!.from('items').select();
       final data = await query.order('created_at', ascending: false).limit(50);
 
       // Filter to only unclaimed items and sort by upload time (newest first)
@@ -52,16 +79,14 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {
         _recentItems = unclaimedItems;
+        _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _recentItems = [];
+        _isLoading = false;
+        _errorMessage = 'Failed to load recent items: $e';
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load recent items: $e')),
-        );
-      }
     }
   }
 
@@ -119,7 +144,7 @@ class _HomePageState extends State<HomePage> {
                   itemCount: _recentItems.length,
                   itemBuilder: (context, index) {
                     final item = _recentItems[index];
-                    return _ItemCard(item: item);
+                    return ItemCard(item: item);
                   },
                 ),
             ],
@@ -131,10 +156,10 @@ class _HomePageState extends State<HomePage> {
 
 }
 
-class _ItemCard extends StatelessWidget {
+class ItemCard extends StatelessWidget {
   final dynamic item;
 
-  const _ItemCard({required this.item});
+  const ItemCard({required this.item});
 
   @override
   Widget build(BuildContext context) {
