@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:intl/date_symbols.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_service.dart';
 
@@ -36,6 +37,52 @@ class ChatService {
       await _supabaseClient.from("chat_room_member").insert(inserts);
     } catch (e) {
       rethrow; // Pass the error up to the UI to show a snackbar
+    }
+  }
+
+  Future<Map<String, dynamic>?> getRoom(String roomId) async {
+    final user = authService.getCurrentUserSession()!.user;
+    try {
+      final result = await _supabaseClient
+          .from("chat_room")
+          .select("id, name, chat_room_member!inner ()")
+          .eq("id", roomId)
+          .eq("chat_room_member.member_id", user.id)
+          .single();
+      return result;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUser() async {
+    final user = authService.getCurrentUserSession()!.user;
+    try {
+      final result = await _supabaseClient
+          .from("users")
+          .select("id, username, profile_pic_url")
+          .eq("id", user.id)
+          .single();
+      return result;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>?>> getMessages(String roomId) async {
+    try {
+      final result = await _supabaseClient
+          .from("message")
+          .select(
+            "id, text, created_at, author_id, author:users (username, profile_pic_url)",
+          )
+          .eq("chat_room_id", roomId)
+          .order("created_at", ascending: false)
+          .limit(100);
+
+      return result;
+    } catch (e) {
+      rethrow;
     }
   }
 }

@@ -9,8 +9,10 @@ import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
 =======
 import 'package:valuables/auth/auth_service.dart';
+import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
+import 'package:valuables/screens/chat_screen.dart';
 import 'pages/home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
 >>>>>>> b3d3cb0 (feat: chat page can create a chat room)
@@ -51,6 +53,8 @@ void setupLocator() {
 
   // Register ChatService
   getIt.registerLazySingleton<ChatService>(() => ChatService());
+
+  getIt.registerLazySingleton<ChatClient>(() => ChatClient());
 }
 
 class MyApp extends StatelessWidget {
@@ -555,19 +559,14 @@ class _MapPageState extends State<MapPage> {
   }
 
   Future<void> startClaim(String itemId) async {
-    debugPrint("Hello world");
     final chatService = GetIt.I<ChatService>();
     final authService = GetIt.I<AuthService>();
     final supabase = Supabase.instance.client;
 
     try {
-      debugPrint("Hello world2");
       // 1. Get the current user (The "Claimer")
       final currentUser = authService.getCurrentUserSession()?.user;
       if (currentUser == null) return;
-
-      debugPrint("Current user is ${currentUser.id}");
-      debugPrint("Item id is $itemId");
 
       // 2. Fetch the Item Holder's ID (The "Owner")
       // We use .single() because we only expect one owner per item
@@ -579,7 +578,6 @@ class _MapPageState extends State<MapPage> {
 
       final String ownerId = itemData['user_id'];
 
-      debugPrint("Person who has it is $ownerId");
       // 3. Create the Room and get the new Room ID
       // Note: I updated ChatService to return the room ID earlier
       final room = await chatService.createRoom("Claim for Item $itemId");
@@ -587,19 +585,17 @@ class _MapPageState extends State<MapPage> {
 
       final String roomId = room['id'];
 
-      debugPrint("Adding ${currentUser.id} and $ownerId to a new chat room");
-
       // 4. Add both users to the room
       // Assuming your addUsersToRoom now accepts a List of IDs or Users
       await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
-
-      debugPrint("Added");
 
       // 5. Navigate to the chat
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute<void>(builder: (context) => const ChatPage()),
+          MaterialPageRoute<void>(
+            builder: (context) => ChatScreen(chatRoom: roomId),
+          ),
         );
       }
     } catch (e) {
