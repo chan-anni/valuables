@@ -479,11 +479,8 @@ class _MapPageState extends State<MapPage> {
 
   final Set<Marker> _markers = <Marker>{};
 
- Future<void> _addMarkers() async {
-
-    final data = await Supabase.instance.client
-    .from('items')
-    .select();
+  Future<void> _addMarkers() async {
+    final data = await Supabase.instance.client.from('items').select();
 
     for (var item in data) {
       if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
@@ -567,7 +564,7 @@ class _MapPageState extends State<MapPage> {
             );
             }
           );
-        }
+        },
       );
       _markers.add(newMarker);
     }
