@@ -45,6 +45,8 @@ dependencies:
   mock_supabase_http_client: ^0.0.3+2
   shared_preferences: ^2.5.4
   web_socket_channel: ^3.0.3
+  flutter_chat_ui: ^2.11.1
+  get_it: ^9.2.1
 
 dev_dependencies:
   flutter_test:

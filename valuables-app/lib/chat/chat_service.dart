@@ -1,9 +1,10 @@
+import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_service.dart';
 
 class ChatService {
   final _supabaseClient = Supabase.instance.client;
-  final authService = AuthService();
+  final authService = GetIt.I<AuthService>();
 
   Future<Map<String, dynamic>?> createRoom(String name) async {
     try {
@@ -24,10 +25,17 @@ class ChatService {
     }
   }
 
-  Future<Map<String, dynamic>?> addUserToRoom(User user, String roomId) async {
-    return await _supabaseClient.from("chat_room_member").insert({
-      "chat_room_id": roomId,
-      "member_id": user.id,
-    });
+  Future<void> addUsersToRoom(List<String> userIds, String roomId) async {
+    try {
+      // 1. Transform the list of User objects into a list of Maps
+      final List<Map<String, dynamic>> inserts = userIds
+          .map((userId) => {"chat_room_id": roomId, "member_id": userId})
+          .toList();
+
+      // 2. Perform a bulk insert
+      await _supabaseClient.from("chat_room_member").insert(inserts);
+    } catch (e) {
+      rethrow; // Pass the error up to the UI to show a snackbar
+    }
   }
 }

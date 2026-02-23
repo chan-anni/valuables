@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:get_it/get_it.dart";
 import "package:valuables/auth/auth_service.dart";
 import "package:valuables/chat/chat_service.dart";
 
@@ -12,8 +13,8 @@ class MyCustomForm extends StatefulWidget {
 }
 
 class MyCustomFormState extends State<MyCustomForm> {
-  final authService = AuthService();
-  final chatService = ChatService();
+  final authService = GetIt.I<AuthService>();
+  final chatService = GetIt.I<ChatService>();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController textController = TextEditingController();
 
@@ -24,10 +25,7 @@ class MyCustomFormState extends State<MyCustomForm> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           TextFormField(controller: textController),
-          TextButton(
-            onPressed:
-            child: Text("Create"),
-          ),
+          TextButton(onPressed: () => print('a'), child: Text("Create")),
         ],
       ),
     );
