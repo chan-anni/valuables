@@ -8,6 +8,8 @@ import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
 =======
+import 'package:valuables/auth/auth_service.dart';
+import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
 import 'pages/home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
@@ -15,6 +17,7 @@ import "package:google_sign_in/google_sign_in.dart";
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 // Theme controller is provided by theme_controller.dart
+import 'package:get_it/get_it.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,36 +38,19 @@ Future<void> _initializeAsync() async {
     debugPrint('_initializeAsync: dotenv.load failed: $e');
   }
 
-  try {
-    final googleClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
-    if (googleClientId != null) {
-      // await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
-    }
-  } catch (e) {
-    debugPrint('_initializeAsync: GoogleSignIn init failed: $e');
-  }
+  setupLocator();
 
-  try {
-    final url = dotenv.env['SUPABASE_URL'];
-    final key = dotenv.env['SUPABASE_ANON_KEY'];
-    if (url != null && key != null) {
-      debugPrint('_initializeAsync: initializing Supabase');
-      try {
-        // Use a timeout to prevent hanging.
-        await Supabase.initialize(url: url, anonKey: key).timeout(const Duration(seconds: 10));
-        supabaseInitializedNotifier.value = true;
-        debugPrint('_initializeAsync: Supabase initialized successfully');
-      } on TimeoutException catch (e) {
-        debugPrint('_initializeAsync: Supabase.initialize timed out: $e');
-        supabaseInitializedNotifier.value = false;
-      }
-    } else {
-      debugPrint('_initializeAsync: Supabase env vars missing; skipping initialize');
-    }
-  } catch (e) {
-    debugPrint('_initializeAsync: Supabase.initialize failed: $e');
-    supabaseInitializedNotifier.value = false;
-  }
+  runApp(MyApp());
+}
+
+void setupLocator() {
+  final getIt = GetIt.instance;
+
+  // Register AuthService FIRST if ChatService depends on it
+  getIt.registerLazySingleton<AuthService>(() => AuthService());
+
+  // Register ChatService
+  getIt.registerLazySingleton<ChatService>(() => ChatService());
 }
 
 class MyApp extends StatelessWidget {
@@ -266,12 +252,41 @@ class _NavigationState extends State<Navigation> {
     );
   }
 
-  void _onCreatePressed() {
-    if (!supabaseInitializedNotifier.value) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Initializing... please wait.')),
-      );
-      return;
+  Future<void> _loadHistory() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        final lost = await Supabase.instance.client
+            .from('items')
+            .select()
+            .eq('user_id', userId)
+            .eq('item_type', 'lost')
+            .order('created_at', ascending: false);
+
+        final found = await Supabase.instance.client
+            .from('items')
+            .select()
+            .eq('user_id', userId)
+            .eq('item_type', 'found')
+            .order('created_at', ascending: false);
+
+        // Sort both with unclaimed at top, then claimed at bottom
+        _sortItems(lost);
+        _sortItems(found);
+
+        setState(() {
+          _lostReports = lost;
+          _foundReports = found;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _historyError = 'Failed to load activity: ${e.toString()}';
+      });
     }
     // If user not logged in, prompt to login first
     final client = Supabase.instance.client;
@@ -364,6 +379,34 @@ class _NavigationState extends State<Navigation> {
       },
     );
   }
+
+  Future<void> _deleteItem(String itemId) async {
+    try {
+      await Supabase.instance.client.from('items').delete().eq('id', itemId);
+      await _loadHistory();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Report deleted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting report: $e')));
+      }
+    }
+  }
+
+  String _formatDate(String? dateString) {
+    if (dateString == null) return 'Unknown date';
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.month}/${date.day}/${date.year}';
+    } catch (e) {
+      return 'Unknown date';
+    }
+  }
 }
 
 class MapPage extends StatefulWidget {
@@ -407,105 +450,19 @@ class _MapPageState extends State<MapPage> {
   final Set<Marker> _markers = <Marker>{};
 
   Future<void> _addMarkers() async {
-<<<<<<< HEAD
-    if (!supabaseInitializedNotifier.value) return;
-
-    try {
-      final data = await Supabase.instance.client.from('items').select();
-
-      for (var item in data) {
-        if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
-            item['title'] == null) {
-          continue;
-        }
-
-        final rawDescription = item['description'];
-        final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
-            ? 'No description added'
-            : rawDescription.toString();
-            
-        Marker newMarker = Marker(
-          markerId: MarkerId(item['id'].toString()),
-          position: LatLng(item['location_lat'], item['location_lng']),
-          onTap: () {
-            showModalBottomSheet(context: context, 
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            builder: (BuildContext context){
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(item['title'],
-                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                        textAlign: TextAlign.left,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
-                    ? Image.network(
-                    item['image_url'], 
-                    height: 200, width: 200, 
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress != null) {
-                        return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
-                      } else {
-                        return child;
-                      }
-                    },
-                    )
-                    : Container(
-                              height: 200,
-                              width: 200,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.image_not_supported),
-                            ),
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(description,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LostItemForm()),
-                      );
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Submit Claim'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              );
-              }
-            );
-          },
-        );
-        _markers.add(newMarker);
-      }
-    } catch (e) {
-      debugPrint('Error loading markers: $e');
-=======
+    // 1. Fetch data
     final data = await Supabase.instance.client.from('items').select();
 
     for (var item in data) {
+      // 2. Safely extract and cast coordinates
+      final double? lat = item['location_lat']?.toDouble();
+      final double? lng = item['location_lng']?.toDouble();
+
+      // 3. Skip this marker if data is missing or corrupted
+      if (lat == null || lng == null) {
+        debugPrint("Skipping item ${item['id']} due to null coordinates");
+        continue;
+      }
       Marker newMarker = Marker(
         markerId: MarkerId(item['id']),
         position: LatLng(item['location_lat'], item['location_lng']),
@@ -541,14 +498,7 @@ class _MapPageState extends State<MapPage> {
                       child: Text(item['description']),
                     ),
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LostItemForm(),
-                          ),
-                        );
-                      },
+                      onPressed: () => {startClaim(item['id'])},
                       icon: const Icon(Icons.add),
                       label: const Text('Submit Claim'),
                       style: ElevatedButton.styleFrom(
@@ -602,5 +552,59 @@ class _MapPageState extends State<MapPage> {
         
         ),
     );
+  }
+
+  Future<void> startClaim(String itemId) async {
+    debugPrint("Hello world");
+    final chatService = GetIt.I<ChatService>();
+    final authService = GetIt.I<AuthService>();
+    final supabase = Supabase.instance.client;
+
+    try {
+      debugPrint("Hello world2");
+      // 1. Get the current user (The "Claimer")
+      final currentUser = authService.getCurrentUserSession()?.user;
+      if (currentUser == null) return;
+
+      debugPrint("Current user is ${currentUser.id}");
+      debugPrint("Item id is $itemId");
+
+      // 2. Fetch the Item Holder's ID (The "Owner")
+      // We use .single() because we only expect one owner per item
+      final itemData = await supabase
+          .from("items")
+          .select("user_id")
+          .eq('id', itemId)
+          .single();
+
+      final String ownerId = itemData['user_id'];
+
+      debugPrint("Person who has it is $ownerId");
+      // 3. Create the Room and get the new Room ID
+      // Note: I updated ChatService to return the room ID earlier
+      final room = await chatService.createRoom("Claim for Item $itemId");
+      if (room == null) return;
+
+      final String roomId = room['id'];
+
+      debugPrint("Adding ${currentUser.id} and $ownerId to a new chat room");
+
+      // 4. Add both users to the room
+      // Assuming your addUsersToRoom now accepts a List of IDs or Users
+      await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
+
+      debugPrint("Added");
+
+      // 5. Navigate to the chat
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(builder: (context) => const ChatPage()),
+        );
+      }
+    } catch (e) {
+      debugPrint("Failed to start claim: $e");
+      // Show an error snackbar here if you like
+    }
   }
 }
