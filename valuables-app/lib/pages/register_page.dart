@@ -63,7 +63,14 @@ class _RegisterPageState extends State<RegisterPage> {
           TextField(controller: _emailController),
           TextField(controller: _passwordController, obscureText: true),
           TextField(controller: _confirmPasswordController, obscureText: true),
-          ElevatedButton(onPressed: signUp, child: const Text("Sign Up")),
+          ElevatedButton(
+            onPressed: signUp,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text("Sign Up")
+          ),
         ],
       ),
     );
