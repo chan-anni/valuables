@@ -31,7 +31,7 @@ valuables/
 
 ```
 ## Contributing
-Please refer to our developer's guidelines for information about how to contribute: [Developer Guidelines](developer_guide.md)
+Please refer to our developer's guidelines for information about how to contribute: [Developer Guidelines](developers_guide.md)
 
 ## User's Manual
 For information about how to use the app, please take a look at our user manual here: [User Manual](user_manual.md)
