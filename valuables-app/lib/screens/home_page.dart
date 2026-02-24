@@ -31,14 +31,14 @@ class _HomePageState extends State<HomePage> {
     }
 
     // Debug: trace HomePage init
-    print('HomePage.initState: start');
+    debugPrint('HomePage.initState: start');
     if (_supabase != null) {
-      _loadRecentItems().then((_) => print('HomePage.initState: recent loaded'));
+      _loadRecentItems().then((_) => debugPrint('HomePage.initState: recent loaded'));
     } else {
-      print('HomePage.initState: Supabase not ready, skipping data loads');
+      debugPrint('HomePage.initState: Supabase not ready, skipping data loads');
       _isLoading = false;
     }
-    print('HomePage.initState: end');
+    debugPrint('HomePage.initState: end');
   }
 
   @override
@@ -60,7 +60,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _loadRecentItems() async {
     try {
       if (_supabase == null) {
-        print('_loadRecentItems: Supabase not initialized, skipping load');
+        debugPrint('_loadRecentItems: Supabase not initialized, skipping load');
         return;
       }
       dynamic query = _supabase!.from('items').select();
@@ -92,6 +92,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+
     return RefreshIndicator(
       onRefresh: () async {
         await _loadRecentItems();
@@ -159,7 +161,7 @@ class _HomePageState extends State<HomePage> {
 class ItemCard extends StatelessWidget {
   final dynamic item;
 
-  const ItemCard({required this.item});
+  const ItemCard({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {

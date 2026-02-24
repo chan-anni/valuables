@@ -127,8 +127,8 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                     ),
                   }
                 : {},
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
+            myLocationEnabled: false,
+            myLocationButtonEnabled: false,
           ),
           if (_pickedLocation != null)
             Positioned(

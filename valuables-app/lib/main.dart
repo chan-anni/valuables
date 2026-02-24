@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
@@ -15,6 +16,7 @@ Future<void> main() async {
 
   // Load .env and initialize Supabase in the background (non-blocking).
   _initializeAsync();
+  unawaited(_initializeAsync());
 
   // Start the UI immediately.
   runApp(MyApp());
@@ -22,32 +24,41 @@ Future<void> main() async {
 
 Future<void> _initializeAsync() async {
   try {
-    print('_initializeAsync: loading .env');
+    debugPrint('_initializeAsync: loading .env');
     await dotenv.load(fileName: '.env');
-    print('_initializeAsync: .env loaded');
+    debugPrint('_initializeAsync: .env loaded');
   } catch (e) {
-    print('_initializeAsync: dotenv.load failed: $e');
+    debugPrint('_initializeAsync: dotenv.load failed: $e');
+  }
+
+  try {
+    final googleClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
+    if (googleClientId != null) {
+      // await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
+    }
+  } catch (e) {
+    debugPrint('_initializeAsync: GoogleSignIn init failed: $e');
   }
 
   try {
     final url = dotenv.env['SUPABASE_URL'];
     final key = dotenv.env['SUPABASE_ANON_KEY'];
     if (url != null && key != null) {
-      print('_initializeAsync: initializing Supabase');
+      debugPrint('_initializeAsync: initializing Supabase');
       try {
         // Use a timeout to prevent hanging.
         await Supabase.initialize(url: url, anonKey: key).timeout(const Duration(seconds: 10));
         supabaseInitializedNotifier.value = true;
-        print('_initializeAsync: Supabase initialized successfully');
+        debugPrint('_initializeAsync: Supabase initialized successfully');
       } on TimeoutException catch (e) {
-        print('_initializeAsync: Supabase.initialize timed out: $e');
+        debugPrint('_initializeAsync: Supabase.initialize timed out: $e');
         supabaseInitializedNotifier.value = false;
       }
     } else {
-      print('_initializeAsync: Supabase env vars missing; skipping initialize');
+      debugPrint('_initializeAsync: Supabase env vars missing; skipping initialize');
     }
   } catch (e) {
-    print('_initializeAsync: Supabase.initialize failed: $e');
+    debugPrint('_initializeAsync: Supabase.initialize failed: $e');
     supabaseInitializedNotifier.value = false;
   }
 }
@@ -92,6 +103,14 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class MessagePage extends StatelessWidget {
+  const MessagePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(child: Text('Messages'));
+  }
+}
 class Navigation extends StatefulWidget {
   const Navigation({super.key});
 
@@ -169,24 +188,23 @@ class _NavigationState extends State<Navigation> {
                     icon: Icons.chat_bubble_rounded,
                     index: 3,
                     onTap: () {
+                      if (!supabaseInitializedNotifier.value) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Initializing... please wait.')),
+                        );
+                        return;
+                      }
                       // Auth guard for messages
-                      if (Supabase.instance.client.auth.currentUser == null) {
-                        _showLoginPrompt();
-                      } else {
-                        setPageIndex(3);
+                      try {
+                        if (Supabase.instance.client.auth.currentUser == null) {
+                          _showLoginPrompt();
+                        } else {
+                          setPageIndex(3);
+                        }
+                      } catch (e) {
+                        // Handle potential errors if client isn't ready despite check
                       }
                     }
-                  ),
-                  // unread badge placeholder
-                  Positioned(
-                    right: 12,
-                    top: 2,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(color: colorScheme.primary, shape: BoxShape.circle),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      child: const Text('2', style: TextStyle(color: Colors.white, fontSize: 10), textAlign: TextAlign.center),
-                    ),
                   ),
                 ],
               ),
@@ -248,6 +266,12 @@ class _NavigationState extends State<Navigation> {
   }
 
   void _onCreatePressed() {
+    if (!supabaseInitializedNotifier.value) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Initializing... please wait.')),
+      );
+      return;
+    }
     // If user not logged in, prompt to login first
     final client = Supabase.instance.client;
     final user = client.auth.currentUser;
@@ -357,6 +381,21 @@ class _MapPageState extends State<MapPage> {
   void initState() {
     super.initState();
     _addMarkersFuture = _addMarkers();
+    supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
+  }
+
+  @override
+  void dispose() {
+    supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
+    super.dispose();
+  }
+
+  void _onSupabaseInitialized() {
+    if (supabaseInitializedNotifier.value) {
+      setState(() {
+        _addMarkersFuture = _addMarkers();
+      });
+    }
   }
 
   static const CameraPosition startPos = CameraPosition(
@@ -364,14 +403,7 @@ class _MapPageState extends State<MapPage> {
     zoom: 14.4746
     );
 
-  // Test dummy markers
-  final Set<Marker> _markers = <Marker>{
-    Marker(
-      markerId: MarkerId('1'), 
-      position: LatLng(46.65428653800135, -122.30802267054545)
-      ),
-    Marker(markerId: MarkerId('2'), position: LatLng(48.65428653800135, -122.30802267054545))
-  };
+  final Set<Marker> _markers = <Marker>{};
 
   Future<void> _addMarkers() async {
     if (!supabaseInitializedNotifier.value) return;
@@ -393,6 +425,7 @@ class _MapPageState extends State<MapPage> {
         }
       }
     } catch (e) {
+<<<<<<< HEAD
       print('Error loading markers: $e');
     final data = await Supabase.instance.client.from('items').select();
 
@@ -481,6 +514,9 @@ class _MapPageState extends State<MapPage> {
         },
       );
       _markers.add(newMarker);
+=======
+      debugPrint('Error loading markers: $e');
+>>>>>>> de61b9f (Correcting the Updated UI Code to Pass the CI Tests Before Merging)
     }
   }
 
