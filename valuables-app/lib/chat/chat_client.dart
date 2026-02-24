@@ -1,10 +1,15 @@
 import 'package:valuables/auth/auth_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_chat_core/flutter_chat_core.dart';
+import 'package:flutter/foundation.dart';
 
 class ChatClient {
-  late final _authService;
-  late final _supabaseClient;
+  late final AuthService _authService;
+  late final SupabaseClient _supabaseClient;
+  late RealtimeChannel _channel;
+  late List<Message> _messages;
+
   ChatClient() {
     _authService = GetIt.I<AuthService>();
     _supabaseClient = Supabase.instance.client;
@@ -15,10 +20,6 @@ class ChatClient {
     required String roomId,
   }) async {
     final user = _authService.getCurrentUserSession()!.user;
-
-    if (user == null) {
-      throw Exception("chat_client: login first");
-    }
 
     if (text.trim() == "") {
       throw Exception("chat_client: message can't be empty");
@@ -45,5 +46,48 @@ class ChatClient {
       rethrow;
     }
     return true;
+  }
+
+  RealtimeChannel useRealtimeChat({
+    required String roomId,
+    required String userId,
+    required void Function(Map<String, dynamic> newRecord) onMessageReceived,
+  }) {
+    final token = _authService.getCurrentUserSession()!.accessToken;
+    _supabaseClient.realtime.setAuth(token);
+
+    // Initialize the channel
+    _channel = _supabaseClient.channel(
+      "room:$roomId:messages", // Removed the extra space after "room:"
+      opts: const RealtimeChannelConfig(private: true),
+    );
+
+    _channel
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'message',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'chat_room_id',
+            value: roomId,
+          ), // Only listen to this specific room
+          callback: (payload) {
+            // Pass the newly inserted database row to the UI
+            onMessageReceived(payload.newRecord);
+          },
+        )
+        .subscribe((status, error) {
+          if (status == RealtimeSubscribeStatus.subscribed) {
+            debugPrint("Successfully subscribed to realtime chat.");
+          }
+        });
+
+    return _channel;
+  }
+
+  void disconnect() {
+    _channel.unsubscribe();
+    _channel.untrack();
   }
 }
