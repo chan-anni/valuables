@@ -70,7 +70,7 @@ class ChatScreenState extends State<ChatScreen> {
           .from('message')
           .select()
           .eq('chat_room_id', widget.chatRoom)
-          .order('created_at', ascending: false); // Chat UI loads bottom-up
+          .order('created_at', ascending: true); // Chat UI loads bottom-up
 
       final List<dynamic> records = response as List<dynamic>;
 
@@ -78,9 +78,7 @@ class ChatScreenState extends State<ChatScreen> {
         final message = chatCore.TextMessage(
           id: record['id'].toString(),
           authorId: record['author_id'],
-          createdAt: DateTime.parse(
-            record['created_at'],
-          ).toUtc(),
+          createdAt: DateTime.parse(record['created_at']).toUtc(),
           text: record['text'],
         );
         _chatController.insertMessage(message);

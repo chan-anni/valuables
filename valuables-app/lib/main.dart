@@ -13,33 +13,24 @@ import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
 import 'package:valuables/screens/chat_screen.dart';
-import 'pages/home_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
 >>>>>>> b3d3cb0 (feat: chat page can create a chat room)
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 // Theme controller is provided by theme_controller.dart
 import 'package:get_it/get_it.dart';
+import 'screens/home_page.dart';
+import 'package:valuables/pages/profile_page.dart';
+import 'package:valuables/pages/history_page.dart';
+import 'package:valuables/screens/lost_item_form.dart';
+import 'package:valuables/theme_controller.dart';
+// Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load .env and initialize Supabase in the background (non-blocking).
   unawaited(_initializeAsync());
-
-  // Start the UI immediately.
-  runApp(MyApp());
-}
-
-Future<void> _initializeAsync() async {
-  try {
-    debugPrint('_initializeAsync: loading .env');
-    await dotenv.load(fileName: '.env');
-    debugPrint('_initializeAsync: .env loaded');
-  } catch (e) {
-    debugPrint('_initializeAsync: dotenv.load failed: $e');
-  }
-
   setupLocator();
 
   runApp(MyApp());
@@ -57,6 +48,52 @@ void setupLocator() {
   getIt.registerLazySingleton<ChatClient>(() => ChatClient());
 }
 
+Future<void> _initializeAsync() async {
+  try {
+    debugPrint('_initializeAsync: loading .env');
+    await dotenv.load(fileName: '.env');
+    debugPrint('_initializeAsync: .env loaded');
+  } catch (e) {
+    debugPrint('_initializeAsync: dotenv.load failed: $e');
+  }
+
+  try {
+    final googleClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
+    if (googleClientId != null) {
+      // await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
+    }
+  } catch (e) {
+    debugPrint('_initializeAsync: GoogleSignIn init failed: $e');
+  }
+
+  try {
+    final url = dotenv.env['SUPABASE_URL'];
+    final key = dotenv.env['SUPABASE_ANON_KEY'];
+    if (url != null && key != null) {
+      debugPrint('_initializeAsync: initializing Supabase');
+      try {
+        // Use a timeout to prevent hanging.
+        await Supabase.initialize(
+          url: url,
+          anonKey: key,
+        ).timeout(const Duration(seconds: 10));
+        supabaseInitializedNotifier.value = true;
+        debugPrint('_initializeAsync: Supabase initialized successfully');
+      } on TimeoutException catch (e) {
+        debugPrint('_initializeAsync: Supabase.initialize timed out: $e');
+        supabaseInitializedNotifier.value = false;
+      }
+    } else {
+      debugPrint(
+        '_initializeAsync: Supabase env vars missing; skipping initialize',
+      );
+    }
+  } catch (e) {
+    debugPrint('_initializeAsync: Supabase.initialize failed: $e');
+    supabaseInitializedNotifier.value = false;
+  }
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -65,16 +102,35 @@ class MyApp extends StatelessWidget {
     const Color deepPurple = Color(0xFF5E2B8A);
     const Color goldColor = Color(0xFFFBC02D); // Darker yellow for contrast
     final lightTheme = ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: deepPurple,
+        primary: deepPurple,
+        secondary: goldColor,
+        tertiary: goldColor,
+      ),
       scaffoldBackgroundColor: Colors.white,
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       useMaterial3: true,
     );
     final darkTheme = ThemeData(
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor, brightness: Brightness.dark),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: deepPurple,
+        primary: deepPurple,
+        secondary: goldColor,
+        tertiary: goldColor,
+        brightness: Brightness.dark,
+      ),
       scaffoldBackgroundColor: const Color(0xFF1E1E1E), // Dark Gray
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF1E1E1E), foregroundColor: Colors.white, elevation: 0),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E1E1E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       useMaterial3: true,
       cardColor: const Color(0xFF1E1E1E),
     );
@@ -116,26 +172,19 @@ class _NavigationState extends State<Navigation> {
   // pages left->right: Map, Listings, (center FAB), Messages, Account
   late final List<Widget> pages = [
     const MapPage(),
-<<<<<<< HEAD
     const HomePage(),
     const SizedBox.shrink(), // placeholder for center FAB
-    const MessagePage(),
-    const ProfilePage(),
-=======
     const ChatPage(),
-    const AuthGate(),
->>>>>>> b3d3cb0 (feat: chat page can create a chat room)
+    const ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Valuables'),
-      ),
+      appBar: AppBar(title: const Text('Valuables')),
       body: pages[currentPageIndex],
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -148,11 +197,7 @@ class _NavigationState extends State<Navigation> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               // Map
-              _buildNavItem(
-                context,
-                icon: Icons.pin_drop_rounded,
-                index: 0,
-              ),
+              _buildNavItem(context, icon: Icons.pin_drop_rounded, index: 0),
               // Listings
               _buildNavItem(
                 context,
@@ -167,7 +212,11 @@ class _NavigationState extends State<Navigation> {
                   backgroundColor: colorScheme.primary,
                   elevation: 4,
                   shape: const CircleBorder(),
-                  child: const Icon(Icons.add_rounded, size: 36, color: Colors.white),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    size: 36,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               // Messages (with badge placeholder)
@@ -181,7 +230,9 @@ class _NavigationState extends State<Navigation> {
                     onTap: () {
                       if (!supabaseInitializedNotifier.value) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Initializing... please wait.')),
+                          const SnackBar(
+                            content: Text('Initializing... please wait.'),
+                          ),
                         );
                         return;
                       }
@@ -195,16 +246,12 @@ class _NavigationState extends State<Navigation> {
                       } catch (e) {
                         // Handle potential errors if client isn't ready despite check
                       }
-                    }
+                    },
                   ),
                 ],
               ),
               // Account/Profile
-              _buildNavItem(
-                context,
-                icon: Icons.person_rounded,
-                index: 4,
-              ),
+              _buildNavItem(context, icon: Icons.person_rounded, index: 4),
             ],
           ),
         ),
@@ -212,24 +259,35 @@ class _NavigationState extends State<Navigation> {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, {required IconData icon, required int index, VoidCallback? onTap}) {
+  Widget _buildNavItem(
+    BuildContext context, {
+    required IconData icon,
+    required int index,
+    VoidCallback? onTap,
+  }) {
     final isSelected = currentPageIndex == index;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return InkWell(
       onTap: onTap ?? () => setPageIndex(index),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? (isDark ? Colors.grey[800] : colorScheme.primary.withValues(alpha: 0.15)) : Colors.transparent,
+          color: isSelected
+              ? (isDark
+                    ? Colors.grey[800]
+                    : colorScheme.primary.withValues(alpha: 0.15))
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Icon(
           icon,
           size: 28,
-          color: isSelected ? (isDark ? Colors.grey[300] : colorScheme.primary) : Colors.grey,
+          color: isSelected
+              ? (isDark ? Colors.grey[300] : colorScheme.primary)
+              : Colors.grey,
         ),
       ),
     );
@@ -243,54 +301,31 @@ class _NavigationState extends State<Navigation> {
         title: const Text('Sign in required'),
         content: const Text('You must be signed in to access this feature.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : null))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: isDark ? Colors.white : null),
+            ),
+          ),
           FilledButton(
-            onPressed: () { 
-              Navigator.pop(context); 
+            onPressed: () {
+              Navigator.pop(context);
               setPageIndex(4); // Go to profile/login
-            }, 
-            child: const Text('Sign in')
+            },
+            child: const Text('Sign in'),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _loadHistory() async {
-    try {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId != null) {
-        final lost = await Supabase.instance.client
-            .from('items')
-            .select()
-            .eq('user_id', userId)
-            .eq('item_type', 'lost')
-            .order('created_at', ascending: false);
-
-        final found = await Supabase.instance.client
-            .from('items')
-            .select()
-            .eq('user_id', userId)
-            .eq('item_type', 'found')
-            .order('created_at', ascending: false);
-
-        // Sort both with unclaimed at top, then claimed at bottom
-        _sortItems(lost);
-        _sortItems(found);
-
-        setState(() {
-          _lostReports = lost;
-          _foundReports = found;
-          _isLoading = false;
-        });
-      } else {
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _historyError = 'Failed to load activity: ${e.toString()}';
-      });
+  void _onCreatePressed() {
+    if (!supabaseInitializedNotifier.value) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Initializing... please wait.')),
+      );
+      return;
     }
     // If user not logged in, prompt to login first
     final client = Supabase.instance.client;
@@ -310,14 +345,25 @@ class _NavigationState extends State<Navigation> {
             children: [
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24.0),
-                child: Text('What would you like to report?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'What would you like to report?',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LostItemForm(forceType: 'lost')));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LostItemForm(forceType: 'lost'),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -333,10 +379,22 @@ class _NavigationState extends State<Navigation> {
                             color: isDark ? Colors.grey[800] : Colors.grey[200],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.help_outline, color: isDark ? Colors.white : Theme.of(context).colorScheme.primary, size: 32),
+                          child: Icon(
+                            Icons.help_outline,
+                            color: isDark
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.primary,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(width: 16),
-                        const Text('Report Lost Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Report Lost Item',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const Spacer(),
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
@@ -345,11 +403,19 @@ class _NavigationState extends State<Navigation> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LostItemForm(forceType: 'found')));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LostItemForm(forceType: 'found'),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -365,10 +431,22 @@ class _NavigationState extends State<Navigation> {
                             color: isDark ? Colors.grey[800] : Colors.grey[200],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.location_on, color: isDark ? Colors.white : Theme.of(context).colorScheme.secondary, size: 32),
+                          child: Icon(
+                            Icons.location_on,
+                            color: isDark
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.secondary,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(width: 16),
-                        const Text('Report Found Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Report Found Item',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const Spacer(),
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
@@ -382,34 +460,6 @@ class _NavigationState extends State<Navigation> {
         );
       },
     );
-  }
-
-  Future<void> _deleteItem(String itemId) async {
-    try {
-      await Supabase.instance.client.from('items').delete().eq('id', itemId);
-      await _loadHistory();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Report deleted')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error deleting report: $e')));
-      }
-    }
-  }
-
-  String _formatDate(String? dateString) {
-    if (dateString == null) return 'Unknown date';
-    try {
-      final date = DateTime.parse(dateString);
-      return '${date.month}/${date.day}/${date.year}';
-    } catch (e) {
-      return 'Unknown date';
-    }
   }
 }
 
@@ -454,28 +504,34 @@ class _MapPageState extends State<MapPage> {
   final Set<Marker> _markers = <Marker>{};
 
   Future<void> _addMarkers() async {
-    // 1. Fetch data
-    final data = await Supabase.instance.client.from('items').select();
+    if (!supabaseInitializedNotifier.value) return;
 
-    for (var item in data) {
-      // 2. Safely extract and cast coordinates
-      final double? lat = item['location_lat']?.toDouble();
-      final double? lng = item['location_lng']?.toDouble();
+    try {
+      final data = await Supabase.instance.client.from('items').select();
 
-      // 3. Skip this marker if data is missing or corrupted
-      if (lat == null || lng == null) {
-        debugPrint("Skipping item ${item['id']} due to null coordinates");
-        continue;
-      }
-      Marker newMarker = Marker(
-        markerId: MarkerId(item['id']),
-        position: LatLng(item['location_lat'], item['location_lng']),
-        onTap: () {
-          showModalBottomSheet(
-            context: context,
-            builder: (BuildContext context) {
-              return SizedBox.expand(
-                child: Column(
+      for (var item in data) {
+        if (item['id'] == null ||
+            item['location_lat'] == null ||
+            item['location_lng'] == null ||
+            item['title'] == null) {
+          continue;
+        }
+
+        final rawDescription = item['description'];
+        final description =
+            (rawDescription == null || rawDescription.toString().trim().isEmpty)
+            ? 'No description added'
+            : rawDescription.toString();
+
+        Marker newMarker = Marker(
+          markerId: MarkerId(item['id'].toString()),
+          position: LatLng(item['location_lat'], item['location_lng']),
+          onTap: () {
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              builder: (BuildContext context) {
+                return Column(
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(16.0),
@@ -488,18 +544,48 @@ class _MapPageState extends State<MapPage> {
                               context,
                             ).style.apply(fontSizeFactor: 1.6),
                             textAlign: TextAlign.left,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          ElevatedButton(
-                            child: Icon(Icons.close),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Close',
                             onPressed: () => Navigator.pop(context),
                           ),
                         ],
                       ),
                     ),
-                    Image.network(item['image_url'], height: 200, width: 200),
+                    (item['image_url'] != null &&
+                            (item['image_url'] as String).isNotEmpty)
+                        ? Image.network(
+                            item['image_url'],
+                            height: 200,
+                            width: 200,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress != null) {
+                                return SizedBox(
+                                  height: 200,
+                                  width: 200,
+                                  child: CircularProgressIndicator(),
+                                );
+                              } else {
+                                return child;
+                              }
+                            },
+                          )
+                        : Container(
+                            height: 200,
+                            width: 200,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image_not_supported),
+                          ),
                     Padding(
                       padding: const EdgeInsets.all(12.0),
-                      child: Text(item['description']),
+                      child: Text(
+                        description,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     ElevatedButton.icon(
                       onPressed: () => {startClaim(item['id'])},
@@ -510,19 +596,20 @@ class _MapPageState extends State<MapPage> {
                           horizontal: 32,
                           vertical: 16,
                         ),
-                        backgroundColor: Colors.green,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                       ),
                     ),
                   ],
-                ),
-              );
-            },
-          );
-        },
-      );
-      _markers.add(newMarker);
->>>>>>> b3d3cb0 (feat: chat page can create a chat room)
+                );
+              },
+            );
+          },
+        );
+        _markers.add(newMarker);
+      }
+    } catch (e) {
+      debugPrint('Error loading markers: $e');
     }
   }
 
@@ -533,28 +620,27 @@ class _MapPageState extends State<MapPage> {
         future: _addMarkersFuture, 
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child:
-                      CircularProgressIndicator()); // Show loading spinner while markers load
-            } else if (snapshot.hasError) {
-              return Center(
-                  child: Text(
-                      'Error: ${snapshot.error}')); // Display error if marker loading fails
-            } else {
-              return GoogleMap(
-                initialCameraPosition: startPos,
-                markers: _markers,
-                onMapCreated: (GoogleMapController controller) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            ); // Show loading spinner while markers load
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            ); // Display error if marker loading fails
+          } else {
+            return GoogleMap(
+              initialCameraPosition: startPos,
+              markers: _markers,
+              onMapCreated: (GoogleMapController controller) {
+                _controller.complete(controller);
+                if (!_controller.isCompleted) {
                   _controller.complete(controller);
-                  if (!_controller.isCompleted) {
-                    _controller.complete(controller);
-                  }
-                },
-              );
-            }
-        }
-        
-        ),
+                }
+              },
+            );
+          }
+        },
+      ),
     );
   }
 

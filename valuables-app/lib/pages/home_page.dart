@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/screens/lost_item_form.dart';
-import 'package:valuables/main.dart' show HistoryPage;
+import 'history_page.dart';
 
 // Trivial comment to test the code coverage comments setup
 class HomePage extends StatefulWidget {
   final VoidCallback? onBrowsePressed;
-  
+
   const HomePage({super.key, this.onBrowsePressed});
 
   @override
@@ -42,12 +42,18 @@ class _HomePageState extends State<HomePage> {
 
       // Filter to only unclaimed items and sort by upload time (newest first)
       List<dynamic> unclaimedItems = data
-          .where((item) => item['status'] != 'claimed' && item['status'] != 'found')
+          .where(
+            (item) => item['status'] != 'claimed' && item['status'] != 'found',
+          )
           .toList();
-      
+
       unclaimedItems.sort((a, b) {
-        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final aDate =
+            DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
       });
 
@@ -108,8 +114,12 @@ class _HomePageState extends State<HomePage> {
         final aClaimed = (a['status'] == 'claimed' || a['status'] == 'found');
         final bClaimed = (b['status'] == 'claimed' || b['status'] == 'found');
         if (aClaimed != bClaimed) return aClaimed ? 1 : -1;
-        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final aDate =
+            DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+            DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
       });
 
@@ -134,7 +144,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showSettingsModal(BuildContext context) {
     final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -150,12 +160,16 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 20),
-              
+
               // Account Section
               if (isLoggedIn) ...[
                 const Text(
                   'Account',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 ListTile(
@@ -168,7 +182,10 @@ class _HomePageState extends State<HomePage> {
                 ),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onTap: () async {
                     final navigationContext = context;
                     Navigator.pop(navigationContext);
@@ -176,7 +193,9 @@ class _HomePageState extends State<HomePage> {
                     if (mounted) {
                       // ignore: use_build_context_synchronously
                       ScaffoldMessenger.of(navigationContext).showSnackBar(
-                        const SnackBar(content: Text('Logged out successfully')),
+                        const SnackBar(
+                          content: Text('Logged out successfully'),
+                        ),
                       );
                       setState(() {});
                     }
@@ -184,11 +203,15 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 20),
               ],
-              
+
               // Notifications Section
               const Text(
                 'Notifications',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
               ),
               const SizedBox(height: 10),
               ListTile(
@@ -216,7 +239,10 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
@@ -228,18 +254,25 @@ class _HomePageState extends State<HomePage> {
                     Expanded(
                       child: Text(
                         'Match alerts are always enabled to help you find your items and connect with others.',
-                        style: TextStyle(fontSize: 12, color: Colors.blue.shade700),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // About Section
               const Text(
                 'About',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey,
+                ),
               ),
               const SizedBox(height: 10),
               ListTile(
@@ -282,7 +315,10 @@ class _HomePageState extends State<HomePage> {
                           children: [
                             const Text(
                               'How to Use Valuables',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             const SizedBox(height: 10),
                             const Text(
@@ -344,7 +380,7 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Activity Summary
             Container(
               padding: const EdgeInsets.all(12),
@@ -369,7 +405,10 @@ class _HomePageState extends State<HomePage> {
                         ),
                         Text(
                           'View your reports, alerts, and messages',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
                         ),
                       ],
                     ),
@@ -378,7 +417,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -418,7 +457,7 @@ class _HomePageState extends State<HomePage> {
 
   void _showProfileModal(BuildContext context) {
     final isLoggedIn = Supabase.instance.client.auth.currentUser != null;
-    
+
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -431,12 +470,21 @@ class _HomePageState extends State<HomePage> {
               radius: 50,
               backgroundColor: Colors.grey.shade200,
               child: Text(
-                _displayName().isNotEmpty ? _displayName()[0].toUpperCase() : 'G',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 32, color: Colors.black),
+                _displayName().isNotEmpty
+                    ? _displayName()[0].toUpperCase()
+                    : 'G',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 32,
+                  color: Colors.black,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            Text(_displayName(), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              _displayName(),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 20),
             if (isLoggedIn)
               SizedBox(
@@ -452,7 +500,9 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               )
@@ -470,7 +520,9 @@ class _HomePageState extends State<HomePage> {
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -498,7 +550,10 @@ class _HomePageState extends State<HomePage> {
               if (_errorMessage != null)
                 Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     border: Border.all(color: Colors.red.shade200),
@@ -515,7 +570,11 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, size: 20, color: Colors.red),
+                        icon: const Icon(
+                          Icons.close,
+                          size: 20,
+                          color: Colors.red,
+                        ),
                         onPressed: () => setState(() => _errorMessage = null),
                         padding: EdgeInsets.zero,
                       ),
@@ -535,8 +594,14 @@ class _HomePageState extends State<HomePage> {
                           radius: 26,
                           backgroundColor: Colors.grey.shade200,
                           child: Text(
-                            _displayName().isNotEmpty ? _displayName()[0].toUpperCase() : 'G',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.black),
+                            _displayName().isNotEmpty
+                                ? _displayName()[0].toUpperCase()
+                                : 'G',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: Colors.black,
+                            ),
                           ),
                         ),
                       ),
@@ -546,7 +611,10 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Text(
                             _displayName(),
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -588,7 +656,11 @@ class _HomePageState extends State<HomePage> {
               // Report Item Section
               Text(
                 'Report lost or found items',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -597,19 +669,29 @@ class _HomePageState extends State<HomePage> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const LostItemForm()),
+                      MaterialPageRoute(
+                        builder: (context) => const LostItemForm(),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.add, size: 32),
                   label: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 14.0),
-                    child: Text('Report Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Report Item',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 24),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -618,7 +700,11 @@ class _HomePageState extends State<HomePage> {
               // Browse Items Section
               Text(
                 'Search for your items',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
               SizedBox(
@@ -628,13 +714,21 @@ class _HomePageState extends State<HomePage> {
                   icon: const Icon(Icons.explore, size: 28),
                   label: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 10.0),
-                    child: Text('Browse Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Browse Items',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
@@ -644,7 +738,11 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 4),
               Text(
                 'Get notified when potential matches are found',
-                style: TextStyle(fontSize: 15, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -657,16 +755,28 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Icon(Icons.notifications_active, size: 20),
                         SizedBox(width: 8),
-                        Text('Lost Items Alerts', style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(
+                          'Lost Items Alerts',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text('${_alertItems.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        '${_alertItems.length}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -684,7 +794,10 @@ class _HomePageState extends State<HomePage> {
                           Icon(Icons.info, color: Colors.blue.shade600),
                           const SizedBox(width: 12),
                           const Expanded(
-                            child: Text('No active alerts. Create alerts on items to get notified when matches appear.', style: TextStyle(color: Colors.grey)),
+                            child: Text(
+                              'No active alerts. Create alerts on items to get notified when matches appear.',
+                              style: TextStyle(color: Colors.grey),
+                            ),
                           ),
                         ],
                       ),
@@ -707,7 +820,11 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 4),
               Text(
                 'Keep track of items waiting to be claimed',
-                style: TextStyle(fontSize: 15, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 12),
 
@@ -720,16 +837,31 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Icon(Icons.list_alt, size: 20),
                         SizedBox(width: 8),
-                        Text('Your Listings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(
+                          'Your Listings',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Text('${_recentItems.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        '${_recentItems.length}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -759,7 +891,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
 }
 
 class _NotificationCard extends StatelessWidget {
@@ -776,10 +907,7 @@ class _NotificationCard extends StatelessWidget {
         color: Colors.amber.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border(
-          left: BorderSide(
-            color: Colors.amber.shade600,
-            width: 4,
-          ),
+          left: BorderSide(color: Colors.amber.shade600, width: 4),
         ),
       ),
       child: Column(
@@ -793,7 +921,11 @@ class _NotificationCard extends StatelessWidget {
                   color: Colors.amber.shade100,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.check_circle, size: 16, color: Colors.amber),
+                child: const Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: Colors.amber,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -840,7 +972,8 @@ class _ItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final itemType = item['item_type']?.toUpperCase() ?? 'UNKNOWN';
     final isLost = itemType == 'LOST';
-    final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
+    final hasImage =
+        item['image_url'] != null && item['image_url'].toString().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
