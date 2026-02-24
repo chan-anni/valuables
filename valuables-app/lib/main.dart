@@ -101,15 +101,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class MessagePage extends StatelessWidget {
-  const MessagePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Messages'));
-  }
-}
-
 class Navigation extends StatefulWidget {
   const Navigation({super.key});
 
@@ -521,6 +512,9 @@ class _MapPageState extends State<MapPage> {
                 markers: _markers,
                 onMapCreated: (GoogleMapController controller) {
                   _controller.complete(controller);
+                  if (!_controller.isCompleted) {
+                    _controller.complete(controller);
+                  }
                 },
               );
             }

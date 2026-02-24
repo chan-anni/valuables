@@ -15,14 +15,14 @@ class MapPickerScreen extends StatefulWidget {
   final double? initialLng;
   
   // Test hooks: allow injecting initial search results and location name cache
-  final List<Location>? initialSearchResults;
+  // final List<Location>? initialSearchResults;
   final Map<String, String>? initialLocationNames;
 
   const MapPickerScreen({
     super.key,
     this.initialLat,
     this.initialLng,
-    this.initialSearchResults,
+    // this.initialSearchResults,
     this.initialLocationNames,
   });
 
@@ -38,19 +38,19 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     target: LatLng(47.65428653800135, -122.30802267054545),
     zoom: 14.4746,
   );
-  String _locationName = 'Tap on the map to select a location';
-  bool _isLoadingLocation = false;
-  bool _isSearching = false;
-  List<Location> _searchResults = [];
+  // String _locationName = 'Tap on the map to select a location';
+  // bool _isLoadingLocation = false;
+  // bool _isSearching = false;
+  // List<Location> _searchResults = [];
   final Map<String, String> _locationNames = {}; // Cache for location names
-  Timer? _debounceTimer;
+  // Timer? _debounceTimer;
 
 
 
-  static const LatLng _defaultLocation = LatLng(
-    47.6062,
-    -122.3321,
-  ); // Default to Seattle if no initial location is provided
+  // static const LatLng _defaultLocation = LatLng(
+  //   47.6062,
+  //   -122.3321,
+  // ); // Default to Seattle if no initial location is provided
 
   @override
   void initState() {
@@ -59,9 +59,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
       _pickedLocation = LatLng(widget.initialLat!, widget.initialLng!);
     }
     // If tests injected initial search results or names, wire them into state
-    if (widget.initialSearchResults != null) {
-      _searchResults = widget.initialSearchResults!;
-    }
+    // if (widget.initialSearchResults != null) {
+    //   _searchResults = widget.initialSearchResults!;
+    // }
     if (widget.initialLocationNames != null) {
       _locationNames.addAll(widget.initialLocationNames!);
     }
