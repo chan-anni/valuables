@@ -11,17 +11,7 @@ class LostItemForm extends StatefulWidget {
   final String? forceType;
   final bool testMode;
   
-<<<<<<< HEAD
-  const LostItemForm({super.key, this.supabaseClient, this.forceType});
-  // When true the form will not attempt to use the global Supabase.instance.client.
-  // Enable this in widget tests to keep the form in "test mode" and avoid
-  // initialization of networked clients.
-  final bool testMode;
-
-  const LostItemForm({super.key, this.supabaseClient, this.testMode = false});
-=======
   const LostItemForm({super.key, this.supabaseClient, this.forceType, this.testMode = false});
->>>>>>> de61b9f (Correcting the Updated UI Code to Pass the CI Tests Before Merging)
 
   @override
   State<LostItemForm> createState() => _LostItemFormState();

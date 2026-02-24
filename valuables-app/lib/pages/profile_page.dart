@@ -297,7 +297,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: primaryColor.withOpacity(0.2),
+                    backgroundColor: primaryColor.withValues(alpha: 0.2),
                     backgroundImage: _imageFile != null
                         ? FileImage(_imageFile!)
                         : (user.userMetadata?['avatar_url'] != null
@@ -529,7 +529,7 @@ class _NotificationCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12.0),
       padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
@@ -604,7 +604,7 @@ class _ItemCard extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: isLost ? primaryColor.withOpacity(0.1) : secondaryColor.withOpacity(0.1),
+              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: hasImage
