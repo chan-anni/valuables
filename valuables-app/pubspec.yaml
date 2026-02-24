@@ -48,6 +48,7 @@ dependencies:
   flutter_chat_ui: ^2.11.1
   get_it: ^9.2.1
   flutter_chat_core: ^2.9.0
+  flutter_chat_types: ^3.6.2
 
 dev_dependencies:
   flutter_test:

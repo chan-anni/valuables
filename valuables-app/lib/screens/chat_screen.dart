@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_core/flutter_chat_core.dart' as type;
+import 'package:flutter_chat_core/flutter_chat_core.dart' as chatCore;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
@@ -19,36 +19,75 @@ class ChatScreen extends StatefulWidget {
 }
 
 class ChatScreenState extends State<ChatScreen> {
-  final _chatController = InMemoryChatController();
+  final _chatController = chatCore.InMemoryChatController();
   final _chatService = GetIt.I<ChatService>();
   final _authService = GetIt.I<AuthService>();
   final _chatClient = GetIt.I<ChatClient>();
 
   late final messages;
-  late final room;
-  late final user;
+  Map<String, dynamic>? room;
+  Map<String, dynamic>? user;
   late RealtimeChannel _channel;
+  final _supabase = Supabase.instance.client; // Add this
+
+  bool _isLoading = true; // Add a loading flag
 
   @override
   void initState() {
     super.initState();
-    room = _chatService.getRoom(widget.chatRoom);
-    user = _chatService.getUser();
+    _initializeChat();
+  }
 
-    if (room == null || user == null) {
+  Future<void> _initializeChat() async {
+    final fetchedRoom = await _chatService.getRoom(widget.chatRoom);
+    final fetchedUser = await _chatService.getUser();
+
+    if (fetchedRoom == null || fetchedUser == null) {
       debugPrint("can't join the page");
-      return; // Fixed: void function cannot return null
+      if (mounted) Navigator.of(context).pop();
+      return;
     }
 
-    // Initialize the channel and provide the callback for new database inserts
+    // Load the chat history before updating the UI state
+    await _loadHistoricalMessages();
+
+    setState(() {
+      room = fetchedRoom;
+      user = fetchedUser;
+      _isLoading = false;
+    });
+
     _channel = _chatClient.useRealtimeChat(
       roomId: widget.chatRoom,
-      userId: user.id,
+      userId: user!['id'],
       onMessageReceived: handleIncomingMessage,
     );
+  }
 
-    // Optional: Load historical messages here
-    // messages = _chatService.getMessages(widget.chatRoom);
+  Future<void> _loadHistoricalMessages() async {
+    try {
+      final response = await _supabase
+          .from('message')
+          .select()
+          .eq('chat_room_id', widget.chatRoom)
+          .order('created_at', ascending: false); // Chat UI loads bottom-up
+
+      final List<dynamic> records = response as List<dynamic>;
+
+      for (var record in records) {
+        final message = chatCore.TextMessage(
+          id: record['id'].toString(),
+          authorId: record['author_id'],
+          createdAt: DateTime.parse(
+            record['created_at'],
+          ).toUtc(),
+          text: record['text'],
+        );
+        _chatController.insertMessage(message);
+      }
+    } catch (e) {
+      debugPrint("Error loading history: $e");
+    }
   }
 
   @override
@@ -60,16 +99,18 @@ class ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Show a loading spinner while fetching the user
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       body: Chat(
         chatController: _chatController,
-        currentUserId: user.id, // Use actual user ID instead of 'user1'
+        currentUserId: user!['id'], // Bracket notation
         onMessageSend: (text) => handleSend(text),
-        resolveUser: (UserID id) async {
-          return type.User(
-            id: id,
-            name: 'John Doe',
-          ); // Consider fetching actual user details
+        resolveUser: (chatCore.UserID id) async {
+          return chatCore.User(id: id, name: 'John Doe');
         },
       ),
     );
@@ -78,34 +119,28 @@ class ChatScreenState extends State<ChatScreen> {
   void handleSend(String text) async {
     if (text.trim().isEmpty) return;
 
-    // 1. Create the Message object for the Local UI (Optimistic Update)
-    final newMessage = TextMessage(
+    final newMessage = chatCore.TextMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      authorId: user.id,
+      authorId: user!['id'], // Bracket notation
       createdAt: DateTime.now().toUtc(),
       text: text,
     );
 
-    // 2. Update the local UI immediately so it feels fast
     _chatController.insertMessage(newMessage);
 
-    // 3. Send the text to Supabase
     await _chatClient.sendMessage(roomId: widget.chatRoom, text: text);
   }
 
   void handleIncomingMessage(Map<String, dynamic> record) {
-    // If the message was sent by the current user, ignore it.
-    // We already added it locally in handleSend() via optimistic updating.
-    if (record['author_id'] == user.id) return;
+    if (record['author_id'] == user!['id']) return; // Bracket notation
 
-    final incomingMessage = TextMessage(
+    final incomingMessage = chatCore.TextMessage(
       id: record['id'].toString(),
       authorId: record['author_id'],
       createdAt: DateTime.parse(record['created_at']).toUtc(),
       text: record['text'],
     );
 
-    // Add the remote message to the UI
     setState(() {
       _chatController.insertMessage(incomingMessage);
     });
