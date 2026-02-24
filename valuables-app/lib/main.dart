@@ -412,111 +412,93 @@ class _MapPageState extends State<MapPage> {
       final data = await Supabase.instance.client.from('items').select();
 
       for (var item in data) {
-        final id = item['id']?.toString() ?? 'unknown';
-        final lat = (item['location_lat'] as num?)?.toDouble();
-        final lng = (item['location_lng'] as num?)?.toDouble();
-
-        if (lat != null && lng != null) {
-          Marker newMarker = Marker(
-            markerId: MarkerId(id),
-            position: LatLng(lat, lng),
-          );
-          _markers.add(newMarker);
+        if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
+            item['title'] == null) {
+          continue;
         }
+
+        final rawDescription = item['description'];
+        final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
+            ? 'No description added'
+            : rawDescription.toString();
+            
+        Marker newMarker = Marker(
+          markerId: MarkerId(item['id'].toString()),
+          position: LatLng(item['location_lat'], item['location_lng']),
+          onTap: () {
+            showModalBottomSheet(context: context, 
+            builder: (BuildContext context){
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(item['title'],
+                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
+                        textAlign: TextAlign.left,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
+                    ? Image.network(
+                    item['image_url'], 
+                    height: 200, width: 200, 
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress != null) {
+                        return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
+                      } else {
+                        return child;
+                      }
+                    },
+                    )
+                    : Container(
+                              height: 200,
+                              width: 200,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.image_not_supported),
+                            ),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Text(description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const LostItemForm()),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Submit Claim'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              );
+              }
+            );
+          },
+        );
+        _markers.add(newMarker);
       }
     } catch (e) {
-<<<<<<< HEAD
-      print('Error loading markers: $e');
-    final data = await Supabase.instance.client.from('items').select();
-
-    for (var item in data) {
-      if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
-          item['title'] == null) {
-        continue;
-      }
-
-    final rawDescription = item['description'];
-    final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
-        ? 'No description added'
-        : rawDescription.toString();
-        
-      Marker newMarker = Marker(
-        markerId: MarkerId(item['id']),
-        position: LatLng(item['location_lat'], item['location_lng']),
-        onTap: () {
-          showModalBottomSheet(context: context, 
-          builder: (BuildContext context){
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(item['title'],
-                      style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                      textAlign: TextAlign.left,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Close',
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-                (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
-                  ? Image.network(
-                  item['image_url'], 
-                  height: 200, width: 200, 
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress != null) {
-                      return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
-                    } else {
-                      return child;
-                    }
-                  },
-                  )
-                  : Container(
-                            height: 200,
-                            width: 200,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported),
-                          ),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Text(description,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LostItemForm()),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Submit Claim'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            );
-            }
-          );
-        },
-      );
-      _markers.add(newMarker);
-=======
       debugPrint('Error loading markers: $e');
->>>>>>> de61b9f (Correcting the Updated UI Code to Pass the CI Tests Before Merging)
     }
   }
 
