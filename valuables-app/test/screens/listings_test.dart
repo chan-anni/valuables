@@ -97,8 +97,9 @@ void main() {
       await tester.tap(find.byType(ItemCard));
       await tester.pumpAndSettle();
 
-      expect(find.text('Tap Me'), findsOneWidget);
-      expect(find.text('Details here'), findsOneWidget);
+      // Title and description appear on both the card (background) and the dialog
+      expect(find.text('Tap Me'), findsNWidgets(2));
+      expect(find.text('Details here'), findsNWidgets(2));
     });
 
     testWidgets('Shows expiration warning if expiring soon', (WidgetTester tester) async {
