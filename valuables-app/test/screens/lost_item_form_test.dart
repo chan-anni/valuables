@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valuables/screens/lost_item_form.dart';
-import 'package:valuables/screens/map_picker_screen.dart';
+// import 'package:valuables/screens/map_picker_screen.dart';
 
 // Mock the Google Maps platform channel to prevent MissingPluginException during tests
 void _mockMapChannel() {
