@@ -110,7 +110,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MapPickerScreen(
-          initialSearchResults: [loc],
+          // initialSearchResults: [loc],
           initialLocationNames: {key: 'Test Place'},
         ),
       ),
@@ -151,7 +151,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MapPickerScreen(
-          initialSearchResults: [loc],
+          // initialSearchResults: [loc],
           initialLocationNames: {key: 'Pike Place Market'},
         ),
       ),
