@@ -9,7 +9,9 @@ import 'map_picker_screen.dart';
 class LostItemForm extends StatefulWidget {
   final SupabaseClient? supabaseClient;
   final String? forceType;
+  final bool testMode;
   
+<<<<<<< HEAD
   const LostItemForm({super.key, this.supabaseClient, this.forceType});
   // When true the form will not attempt to use the global Supabase.instance.client.
   // Enable this in widget tests to keep the form in "test mode" and avoid
@@ -17,6 +19,9 @@ class LostItemForm extends StatefulWidget {
   final bool testMode;
 
   const LostItemForm({super.key, this.supabaseClient, this.testMode = false});
+=======
+  const LostItemForm({super.key, this.supabaseClient, this.forceType, this.testMode = false});
+>>>>>>> de61b9f (Correcting the Updated UI Code to Pass the CI Tests Before Merging)
 
   @override
   State<LostItemForm> createState() => _LostItemFormState();
@@ -372,6 +377,7 @@ class _LostItemFormState extends State<LostItemForm> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
+    // NOTE: Ensure NSCameraUsageDescription and NSPhotoLibraryUsageDescription are in Info.plist
     
     // Show options: Camera or Gallery
     final source = await showDialog<ImageSource>(

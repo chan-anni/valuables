@@ -300,12 +300,12 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                     backgroundColor: primaryColor.withOpacity(0.2),
                     backgroundImage: _imageFile != null
                         ? FileImage(_imageFile!)
-                        : (user?.userMetadata?['avatar_url'] != null
-                            ? NetworkImage(user!.userMetadata!['avatar_url'])
+                        : (user.userMetadata?['avatar_url'] != null
+                            ? NetworkImage(user.userMetadata!['avatar_url'] as String)
                             : null) as ImageProvider?,
-                    child: (_imageFile == null && user?.userMetadata?['avatar_url'] == null)
+                    child: (_imageFile == null && user.userMetadata?['avatar_url'] == null)
                         ? Text(
-                            (user?.userMetadata?['name'] as String? ?? 'U')[0]
+                            ((user.userMetadata?['name'] as String?) ?? 'U')[0]
                                 .toUpperCase(),
                             style: TextStyle(
                               fontSize: 32,
@@ -340,11 +340,11 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Center(child: Text(user?.userMetadata?['name'] ?? 'No Name', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+                  Center(child: Text(user.userMetadata?['name'] as String? ?? 'No Name', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
                   const SizedBox(height: 4),
-                  Center(child: Text('@${user?.userMetadata?['username'] ?? 'username'}', style: TextStyle(fontSize: 16, color: isDark ? Colors.grey[300] : Colors.grey[800]))),
+                  Center(child: Text('@${user.userMetadata?['username'] as String? ?? 'username'}', style: TextStyle(fontSize: 16, color: isDark ? Colors.grey[300] : Colors.grey[800]))),
                   const SizedBox(height: 4),
-                  Center(child: Text(user?.email ?? '', style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[800]))),
+                  Center(child: Text(user.email ?? '', style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[800]))),
                   const SizedBox(height: 16),
                   Center(
                     child: OutlinedButton(
@@ -662,8 +662,6 @@ class _LoginSignUpTab extends StatefulWidget {
 }
 
 class _LoginSignUpTabState extends State<_LoginSignUpTab> {
-  int _selectedTab = 0;
-
   @override
   Widget build(BuildContext context) {
     return const _LoginForm();
