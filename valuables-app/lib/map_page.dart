@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/screens/lost_item_form.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 
 
@@ -168,7 +167,7 @@ class _MapPageState extends State<MapPage> {
       final latLng = LatLng(position.latitude, position.longitude);
       
       final mapController = await _controller.future;
-      mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
+      mapController.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
 
     } catch (e) {
 
