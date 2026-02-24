@@ -54,7 +54,7 @@ class ChatClient {
     required void Function(Map<String, dynamic> newRecord) onMessageReceived,
   }) {
     final token = _authService.getCurrentUserSession()!.accessToken;
-    _supabaseClient.realtime.setAuth(token);
+    // _supabaseClient.realtime.setAuth(token);
 
     // Initialize the channel
     _channel = _supabaseClient.channel(
@@ -78,8 +78,9 @@ class ChatClient {
           },
         )
         .subscribe((status, error) {
-          if (status == RealtimeSubscribeStatus.subscribed) {
-            debugPrint("Successfully subscribed to realtime chat.");
+          debugPrint("Realtime status: $status, error: $error");
+          if (status == RealtimeSubscribeStatus.channelError) {
+            debugPrint("Channel error — check RLS policies and auth.");
           }
         });
 
@@ -87,7 +88,6 @@ class ChatClient {
   }
 
   void disconnect() {
-    _channel.unsubscribe();
-    _channel.untrack();
+    _supabaseClient.removeChannel(_channel);
   }
 }

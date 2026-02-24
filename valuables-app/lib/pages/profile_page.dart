@@ -1,5 +1,11 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:valuables/theme_controller.dart';
+import 'package:valuables/pages/history_page.dart';
 
 final _supabase = Supabase.instance.client;
 
@@ -10,36 +16,70 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   bool _isLoggedIn = false;
+  late final StreamSubscription<AuthState> _authSubscription;
+  late final TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _isLoggedIn = _supabase.auth.currentUser != null;
+    
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((data) {
+      final bool loggedIn = data.session != null;
+      if (loggedIn != _isLoggedIn) {
+        if (mounted) {
+          setState(() {
+            _isLoggedIn = loggedIn;
+          });
+          if (!loggedIn) {
+            // Switch to the first tab (Sign In) if logged out
+            _tabController.animateTo(0);
+          }
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           title: const Text('Account'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryPage()));
+              },
+            ),
+          ],
           bottom: TabBar(
+            controller: _tabController,
             tabs: [
               Tab(text: _isLoggedIn ? 'Account Info' : 'Sign In'),
               const Tab(text: 'Settings'),
             ],
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.primary,
           ),
         ),
         body: TabBarView(
+          controller: _tabController,
           children: [
             _isLoggedIn ? const _AccountInfoTab() : const _LoginSignUpTab(),
-            const _SettingsTab(),
+            _SettingsTab(),
           ],
         ),
-      ),
     );
   }
 }
@@ -56,6 +96,9 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   late TextEditingController _usernameController;
   bool _isEditing = false;
   bool _isLoading = false;
+  List<dynamic> _userItems = [];
+  List<dynamic> _alertItems = [];
+  File? _imageFile;
 
   @override
   void initState() {
@@ -67,6 +110,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
     _usernameController = TextEditingController(
       text: user?.userMetadata?['username'] ?? '',
     );
+    _loadUserData();
   }
 
   @override
@@ -76,21 +120,147 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
     super.dispose();
   }
 
+  Future<void> _loadUserData() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    // Load user items
+    try {
+      final items = await _supabase
+          .from('items')
+          .select()
+          .eq('user_id', userId)
+          .neq('status', 'claimed')
+          .order('created_at', ascending: false);
+      
+      if (mounted) {
+        setState(() {
+          _userItems = items;
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
+
+    // Load alerts
+    try {
+      List alerts = [];
+      try {
+        final alertData = await _supabase
+            .from('alerts')
+            .select('*, item:items(*)')
+            .eq('user_id', userId)
+            .order('created_at', ascending: false)
+            .limit(20);
+        for (var a in alertData) {
+          if (a['item'] != null) alerts.add(a['item']);
+        }
+      } catch (_) {
+        // Fallback
+      }
+
+      if (mounted) {
+        setState(() {
+          _alertItems = alerts;
+        });
+      }
+    } catch (e) {
+      // Handle error
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    // NOTE: Ensure NSCameraUsageDescription and NSPhotoLibraryUsageDescription are in Info.plist
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Image Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    try {
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        if (!mounted) return;
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        String message = 'Error picking image: ${e.message}';
+        if (e.code == 'camera_access_denied') {
+          message = 'Camera access denied. Please enable it in settings.';
+        } else if (e.code == 'source_not_available') {
+          message = 'Camera not available on this device/simulator.';
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
+      String? avatarUrl;
+      if (_imageFile != null) {
+        final userId = _supabase.auth.currentUser!.id;
+        final path = 'profiles/$userId/${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await _supabase.storage.from('items').upload(path, _imageFile!);
+        avatarUrl = _supabase.storage.from('items').getPublicUrl(path);
+      }
+
+      final Map<String, dynamic> updates = {
+        'name': _nameController.text,
+        'username': _usernameController.text,
+      };
+      
+      if (avatarUrl != null) {
+        updates['avatar_url'] = avatarUrl;
+      }
+
       await _supabase.auth.updateUser(
         UserAttributes(
-          data: {
-            'name': _nameController.text,
-            'username': _usernameController.text,
-          },
+          data: updates,
         ),
       );
       if (mounted) {
         setState(() {
           _isEditing = false;
           _isLoading = false;
+          _imageFile = null;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile updated successfully')),
@@ -109,6 +279,13 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   @override
   Widget build(BuildContext context) {
     final user = _supabase.auth.currentUser;
+
+    if (user == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -116,46 +293,67 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey.shade300,
-                child: Text(
-                  (user?.userMetadata?['name'] as String? ?? 'U')[0]
-                      .toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: primaryColor.withValues(alpha: 0.2),
+                    backgroundImage: _imageFile != null
+                        ? FileImage(_imageFile!)
+                        : (user.userMetadata?['avatar_url'] != null
+                            ? NetworkImage(user.userMetadata!['avatar_url'] as String)
+                            : null) as ImageProvider?,
+                    child: (_imageFile == null && user.userMetadata?['avatar_url'] == null)
+                        ? Text(
+                            ((user.userMetadata?['name'] as String?) ?? 'U')[0]
+                                .toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : primaryColor,
+                            ),
+                          )
+                        : null,
                   ),
-                ),
+                  if (_isEditing)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
             if (!_isEditing)
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _ProfileInfoBox(label: 'Email', value: user?.email ?? 'N/A'),
-                  const SizedBox(height: 12),
-                  _ProfileInfoBox(
-                    label: 'Name',
-                    value: user?.userMetadata?['name'] ?? 'Not set',
-                  ),
-                  const SizedBox(height: 12),
-                  _ProfileInfoBox(
-                    label: 'Username',
-                    value: user?.userMetadata?['username'] ?? 'Not set',
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
+                  Center(child: Text(user.userMetadata?['name'] as String? ?? 'No Name', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
+                  const SizedBox(height: 4),
+                  Center(child: Text('@${user.userMetadata?['username'] as String? ?? 'username'}', style: TextStyle(fontSize: 16, color: isDark ? Colors.grey[300] : Colors.grey[800]))),
+                  const SizedBox(height: 4),
+                  Center(child: Text(user.email ?? '', style: TextStyle(fontSize: 14, color: isDark ? Colors.grey[400] : Colors.grey[800]))),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: OutlinedButton(
                       onPressed: () => setState(() => _isEditing = true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark ? Colors.white : primaryColor,
+                        side: BorderSide(color: isDark ? Colors.white : primaryColor),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(20),
                         ),
                       ),
                       child: const Text('Edit Profile'),
@@ -193,7 +391,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _updateProfile,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
@@ -208,9 +406,12 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: () => setState(() => _isEditing = false),
+                          onPressed: () => setState(() {
+                            _isEditing = false;
+                            _imageFile = null;
+                          }),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
+                            backgroundColor: Colors.black,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
@@ -224,6 +425,91 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                   ),
                 ],
               ),
+
+            const SizedBox(height: 32),
+            
+            // My Listings Section
+            if (!_isEditing) ...[
+              Text(
+                'My Active Listings',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
+              ),
+              const SizedBox(height: 8),
+              if (_userItems.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.format_list_bulleted_rounded, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                      SizedBox(height: 8),
+                      Text('No active listings', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                    ],
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _userItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _userItems[index];
+                    return _ItemCard(item: item);
+                  },
+                ),
+            ],
+
+            const SizedBox(height: 32),
+
+            // Alerts Section (Moved below listings)
+            if (!_isEditing) ...[
+              Text(
+                'Potential Matches',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
+              ),
+              const SizedBox(height: 8),
+              if (_alertItems.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.notifications_none, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                      SizedBox(height: 8),
+                      Text('No potential matches', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                    ],
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _alertItems.length,
+                  itemBuilder: (context, index) {
+                    final item = _alertItems[index];
+                    return _NotificationCard(
+                      item: item, 
+                      onDismiss: () {
+                        setState(() {
+                          _alertItems.removeAt(index);
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Notification moved to history')),
+                        );
+                      }
+                    );
+                  },
+                ),
+              const SizedBox(height: 24),
+            ],
           ],
         ),
       ),
@@ -231,34 +517,137 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   }
 }
 
-class _ProfileInfoBox extends StatelessWidget {
-  final String label;
-  final String value;
+class _NotificationCard extends StatelessWidget {
+  final dynamic item;
+  final VoidCallback onDismiss;
 
-  const _ProfileInfoBox({required this.label, required this.value});
+  const _NotificationCard({required this.item, required this.onDismiss});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.all(12.0),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        border: Border.all(color: Colors.grey.shade300),
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: Theme.of(context).colorScheme.secondary,
+            width: 4,
+          ),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontWeight: FontWeight.bold,
+          Row(
+            children: [
+              Icon(Icons.notifications_active, size: 16, color: Theme.of(context).colorScheme.secondary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item['title'] ?? 'Item Found',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      '${item['category'] ?? 'Unknown'} • ${item['item_type']?.toUpperCase() ?? 'UNKNOWN'}',
+                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, size: 16, color: Colors.grey),
+                onPressed: onDismiss,
+                tooltip: 'Dismiss',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ItemCard extends StatelessWidget {
+  final dynamic item;
+
+  const _ItemCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final itemType = item['item_type']?.toUpperCase() ?? 'UNKNOWN';
+    final isLost = itemType == 'LOST';
+    final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final secondaryColor = Theme.of(context).colorScheme.secondary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.all(12.0),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF252525) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: hasImage
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: Image.network(
+                      item['image_url'] as String,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Icon(
+                          isLost ? Icons.help_outline : Icons.location_on,
+                          color: isLost ? primaryColor : secondaryColor,
+                        );
+                      },
+                    ),
+                  )
+                : Icon(
+                    isLost ? Icons.help_outline : Icons.location_on,
+                    color: isLost ? primaryColor : secondaryColor,
+                  ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item['title'] ?? 'Untitled',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${item['category'] ?? 'Uncategorized'} • ${item['item_type'] ?? 'Unknown'}',
+                  style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(value, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );
@@ -273,27 +662,9 @@ class _LoginSignUpTab extends StatefulWidget {
 }
 
 class _LoginSignUpTabState extends State<_LoginSignUpTab> {
-  int _selectedTab = 0;
-
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          TabBar(
-            onTap: (index) => setState(() => _selectedTab = index),
-            tabs: const [
-              Tab(text: 'Sign In'),
-              Tab(text: 'Sign Up'),
-            ],
-          ),
-          Expanded(
-            child: _selectedTab == 0 ? const _LoginForm() : const _SignUpForm(),
-          ),
-        ],
-      ),
-    );
+    return const _LoginForm();
   }
 }
 
@@ -316,9 +687,6 @@ class _LoginFormState extends State<_LoginForm> {
         email: _emailController.text,
         password: _passwordController.text,
       );
-      if (mounted) {
-        Navigator.pop(context);
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -332,50 +700,74 @@ class _LoginFormState extends State<_LoginForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TextField(
-            controller: _emailController,
-            decoration: InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _passwordController,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: 'Password',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('Welcome Back', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
               ),
-              child: _isLoading
-                  ? const CircularProgressIndicator()
-                  : const Text('Sign In'),
-            ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('Sign In'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(title: const Text('Sign Up')),
+                        body: const _SignUpForm(),
+                      ),
+                    ),
+                  );
+                },
+                child: Text("Don't have an account? Sign Up", style: TextStyle(color: isDark ? Colors.white : null)),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -419,6 +811,7 @@ class _SignUpFormState extends State<_SignUpForm> {
             content: Text('Sign up successful! Please verify your email.'),
           ),
         );
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -433,16 +826,22 @@ class _SignUpFormState extends State<_SignUpForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(Icons.person_add, size: 64, color: isDark ? Colors.white : Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 16),
+            const Text('Create Account', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 32),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
                 labelText: 'Full Name',
+                prefixIcon: const Icon(Icons.person),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -453,6 +852,7 @@ class _SignUpFormState extends State<_SignUpForm> {
               controller: _usernameController,
               decoration: InputDecoration(
                 labelText: 'Username',
+                prefixIcon: const Icon(Icons.alternate_email),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -463,6 +863,7 @@ class _SignUpFormState extends State<_SignUpForm> {
               controller: _emailController,
               decoration: InputDecoration(
                 labelText: 'Email',
+                prefixIcon: const Icon(Icons.email),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -474,6 +875,7 @@ class _SignUpFormState extends State<_SignUpForm> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Password',
+                prefixIcon: const Icon(Icons.lock),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -485,8 +887,8 @@ class _SignUpFormState extends State<_SignUpForm> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _signup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -526,6 +928,8 @@ class _SettingsTabState extends State<_SettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final user = _supabase.auth.currentUser;
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -554,6 +958,21 @@ class _SettingsTabState extends State<_SettingsTab> {
               value: _privacyEnabled,
               onChanged: (value) => setState(() => _privacyEnabled = value),
             ),
+            const SizedBox(height: 12),
+            ListTile(
+              title: const Text('Appearance'),
+              subtitle: ValueListenableBuilder<ThemeMode>(
+                valueListenable: themeNotifier,
+                builder: (context, mode, _) => Text(mode == ThemeMode.dark ? 'Dark Mode' : 'Light Mode'),
+              ),
+              trailing: ValueListenableBuilder<ThemeMode>(
+                valueListenable: themeNotifier,
+                builder: (context, mode, _) => Switch(
+                  value: mode == ThemeMode.dark,
+                  onChanged: (value) => themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light,
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             const Text(
               'App Info',
@@ -563,22 +982,20 @@ class _SettingsTabState extends State<_SettingsTab> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey.shade100,
+                color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [Text('App Version'), Text('1.0.0')],
+                children: [const Text('App Version'), Text('1.0.0', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black))],
               ),
             ),
             const SizedBox(height: 24),
+            if (user != null)
             Center(
               child: TextButton(
                 onPressed: () async {
-                  final navigator = Navigator.of(context);
                   await _supabase.auth.signOut();
-                  if (!mounted) return;
-                  navigator.popUntil((route) => route.isFirst);
                 },
                 child: const Text(
                   'Sign Out',
