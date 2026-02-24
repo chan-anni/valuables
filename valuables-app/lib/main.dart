@@ -417,6 +417,7 @@ class _MapPageState extends State<MapPage> {
           position: LatLng(item['location_lat'], item['location_lng']),
           onTap: () {
             showModalBottomSheet(context: context, 
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             builder: (BuildContext context){
               return Column(
                 children: [
@@ -475,7 +476,7 @@ class _MapPageState extends State<MapPage> {
                     label: const Text('Submit Claim'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: Colors.green,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
                       foregroundColor: Colors.white,
                     ),
                   ),
