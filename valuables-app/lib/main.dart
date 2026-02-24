@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
@@ -15,7 +14,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load .env and initialize Supabase in the background (non-blocking).
-  _initializeAsync();
   unawaited(_initializeAsync());
 
   // Start the UI immediately.
@@ -111,6 +109,7 @@ class MessagePage extends StatelessWidget {
     return const Center(child: Text('Messages'));
   }
 }
+
 class Navigation extends StatefulWidget {
   const Navigation({super.key});
 
@@ -232,7 +231,7 @@ class _NavigationState extends State<Navigation> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? (isDark ? Colors.grey[800] : colorScheme.primary.withOpacity(0.15)) : Colors.transparent,
+          color: isSelected ? (isDark ? Colors.grey[800] : colorScheme.primary.withValues(alpha: 0.15)) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Icon(

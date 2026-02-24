@@ -230,7 +230,7 @@ class ItemCard extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-                color: isLost ? primaryColor.withOpacity(0.1) : secondaryColor.withOpacity(0.1),
+              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: hasImage
@@ -292,7 +292,7 @@ class ItemCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isLost ? primaryColor.withOpacity(0.1) : secondaryColor.withOpacity(0.1),
+                color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
