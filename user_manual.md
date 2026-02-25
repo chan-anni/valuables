@@ -7,8 +7,8 @@ The app will be available in Apk for download. It will require at least **Androi
 ### iOS:
 This app will be available through the Apple Appstore.
 The app requires **iOS 13 or later**.
-### Accounts:
-For authentication, having a Google Account can link easily link the user to their profile (not required).
+
+Additionally, for authentication, having a Google Account can link easily link the user to their profile (not required).
 
 # How To Run The Software
 The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software).
