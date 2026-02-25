@@ -3,20 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-<<<<<<< HEAD
 import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
-=======
 import 'package:valuables/auth/auth_service.dart';
 import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
 import 'package:valuables/screens/chat_screen.dart';
 import 'package:get_it/get_it.dart';
-import 'screens/home_page.dart';
-import 'package:valuables/pages/profile_page.dart';
-import 'package:valuables/pages/history_page.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 // Theme controller is provided by theme_controller.dart
@@ -467,7 +462,8 @@ class MapPage extends StatefulWidget {
 
 // Map page -- needs API key
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
   Future<void>? _addMarkersFuture;
 
   @override
@@ -493,8 +489,8 @@ class _MapPageState extends State<MapPage> {
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746
-    );
+    zoom: 14.4746,
+  );
 
   final Set<Marker> _markers = <Marker>{};
 
@@ -612,7 +608,7 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder(
-        future: _addMarkersFuture, 
+        future: _addMarkersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
