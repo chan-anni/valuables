@@ -48,7 +48,6 @@ Here, users can edit their profile picture, their profile name and information i
 
 History & Activity Page (IP): After clicking on the icon where users can check their past history, they should be able to see past reports for found items and lost items that have been claimed/unclaimed. They should also be able to see any past potential matches between an item they have lost and other uploaded items.
 
----
 # How to report a bug
 User can access the [GitHub repository](https://github.com/chan-anni/valuables/issues) and create a issue to indicate a specific bug.
 Details that should be included in the report:
@@ -60,6 +59,5 @@ Details that should be included in the report:
 	- If the bug seems egregious (i.e. obviously affecting a large portion of users), there's probably something unusual about your setup that's a necessary part of the steps to reproduce the bug. You have much better chances of figuring it out than a developer who does not have access to your system.
 - Provide additional information, especially if you can't reproduce the bug in a new profile; and/or by reporting a **crash**, **memory usage**, **performance**, **regression** bug; or if the problem is with a specific web site.
 
----
 ## Known Bugs
 We have some bugs that are in our Github "Issues" tab for the things that are still in progress.
