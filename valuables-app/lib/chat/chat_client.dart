@@ -1,14 +1,12 @@
 import 'package:valuables/auth/auth_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter/foundation.dart';
 
 class ChatClient {
   late final AuthService _authService;
   late final SupabaseClient _supabaseClient;
   late RealtimeChannel _channel;
-  late List<Message> _messages;
 
   ChatClient() {
     _authService = GetIt.I<AuthService>();
@@ -53,9 +51,6 @@ class ChatClient {
     required String userId,
     required void Function(Map<String, dynamic> newRecord) onMessageReceived,
   }) {
-    final token = _authService.getCurrentUserSession()!.accessToken;
-    // _supabaseClient.realtime.setAuth(token);
-
     // Initialize the channel
     _channel = _supabaseClient.channel(
       "room:$roomId:messages", // Removed the extra space after "room:"

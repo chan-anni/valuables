@@ -8,7 +8,6 @@ import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
 import 'package:valuables/screens/chat_screen.dart';
-import "package:google_sign_in/google_sign_in.dart";
 import 'package:get_it/get_it.dart';
 import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';
