@@ -1,7 +1,6 @@
 # Introduction
 Valuables is a lost and found app platform that connects item owners and finders through a visual map interface. Through centering discovery around location, the app makes it easier for users to report found items, search for lost belongings, and coordinate safe retrieval. Now you can find your items without physically retracing your steps, or submit a lost item report when there is not trustworthy central desk!
 
----
 # How To Install The Software
 ### Android
 The app will be available in Apk for download. It will require at least **Android 5.0**.
@@ -9,11 +8,9 @@ The app will be available in Apk for download. It will require at least **Androi
 This app will be available through the Apple Appstore.
 The app requires **iOS 13 or later**.
 
----
 # How To Run The Software
 The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software).
 
----
 # How To Use The Software
 
 > The software is still in development, all the incomplete features will be marked with **IP (In Progress)**
@@ -49,10 +46,8 @@ Here, users can edit their profile picture, their profile name and information i
 ### History & Activity Page (IP)
 After clicking on the icon where users can check their past history, they should be able to see past reports for found items and lost items that have been claimed/unclaimed. They should also be able to see any past potential matches.
 
----
 ## How to Report a Bug
 We will be taking any bug reports in the github under "Issues". File the bug labeled under "bug" and please look at the documentation label that has a "Bug-report Template" in order to fill out a bug report.
 
----
 ## Known Bugs
 We have some bugs that are in our Github "Issues" tab for the things that are still in progress.
