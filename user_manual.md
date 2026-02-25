@@ -61,3 +61,6 @@ Details that should be included in the report:
 
 ## Known Bugs
 We have some bugs that are in our Github "Issues" tab for the things that are still in progress.
+
+- User can create multiple chats if they start a claim on the same item
+- User can create a chat with themselves when they "claim" their report
