@@ -12,7 +12,9 @@ Additionally, for authentication, having a Google Account can link easily link t
 The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software).
 
 # How To Use The Software
-> The software is still in development, all the incomplete features will be marked with **IP (In Progress)**
+
+The software is still in development, all the incomplete features will be marked with **IP (In Progress)**
+
 ## Navigation Bar
 Use the navigation bar to redirect to different pages within the application:
   - [Landing/Map Page](#landing/map-page)
