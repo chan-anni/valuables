@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valuables/screens/lost_item_form.dart';
+// import 'package:valuables/screens/map_picker_screen.dart';
 
 // Mock the Google Maps platform channel to prevent MissingPluginException during tests
 void _mockMapChannel() {
@@ -15,8 +16,8 @@ void _mockMapChannel() {
 Future<void> pumpForm(WidgetTester tester) async {
   _mockMapChannel();
   await tester.pumpWidget(
-    const MaterialApp(
-      home: LostItemForm(), // supabaseClient defaults to null in test mode
+    MaterialApp(
+      home: LostItemForm(testMode: true), // keep form in test mode for widget tests
     ),
   );
   await tester.pumpAndSettle();
@@ -244,7 +245,7 @@ void main() {
     testWidgets('Form renders correctly with all fields', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(const MaterialApp(home: LostItemForm()));
+      await tester.pumpWidget(MaterialApp(home: LostItemForm(testMode: true)));
 
       await tester.pumpAndSettle();
 
@@ -260,12 +261,11 @@ void main() {
     });
     testWidgets('Date picker opens when tapped', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: LostItemForm(),
+        MaterialApp(
+          home: LostItemForm(testMode: true),
         ),
       );
       await tester.pumpAndSettle();
     });
-    
   });
 }
