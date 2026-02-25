@@ -1,6 +1,6 @@
 #source 'https://github.com/CocoaPods/Specs.git'
 #platform :ios, '13.0'
-platform :ios, '14.0'
+platform :ios, '15.0'
 
 #source 'http://cdn.cocoapods.org/' #added because SSL kept erroring out, forcing to use HTTP instead of HTTPS. . Feb10, 2026.
 
