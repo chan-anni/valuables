@@ -4,15 +4,13 @@ Valuables is a lost and found app platform that connects item owners and finders
 ---
 # How To Install The Software
 ## Android
-The app will be available in Apk for download. It will require at least **Android 5.0**
+The app will be available in Apk for download. It will require at least **Android 5.0**.
 ## iOS
-Through Appstore (?)
-The app requires **iOS 13 or later**
-## Web (we technically have a web version of it as well)
-
+This app will be available through the Apple Appstore.
+The app requires **iOS 13 or later**.
 ---
 # How To Run The Software
-The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software) 
+The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software).
 
 ---
 # How To Use The Software
@@ -23,7 +21,7 @@ Use the navigation bar to redirect to different pages within the application:
 - [Landing/Map Page](#landing/map-page)
 - [Listing Page]()
 ## Landing/Map Page
-In the map page, the user can navigate around and see the pins which represent the locations of where the corresponding item was found
+In the map page, the user can navigate around and see the pins which represent the locations of where the corresponding item was found.
 ### Pins
 Each pin is a lost item reported by another user, clicking on it reveals more information about the item.
 
@@ -34,4 +32,4 @@ The item view shows its title, a description of what the item is, and a picture 
 Search bar allows users to search for items based on their title and description.
 
 ## Listing Page (IP)
-The listing page is another way to see what users' have found. It would also show users' lost item report, acknowledging 
+The listing page is another way to see what users' have found. It would also show users' lost item report, allowing other users to acknowledge other lost items to possibly lookout for.
