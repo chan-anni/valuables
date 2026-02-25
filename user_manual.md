@@ -2,19 +2,19 @@
 Valuables is a lost and found app platform that connects item owners and finders through a visual map interface. Through centering discovery around location, the app makes it easier for users to report found items, search for lost belongings, and coordinate safe retrieval. Now you can find your items without physically retracing your steps, or submit a lost item report when there is not trustworthy central desk!
 
 ---
-### How To Install The Software
-# Android
+# How To Install The Software
+### Android
 The app will be available in Apk for download. It will require at least **Android 5.0**.
-# iOS
+### iOS
 This app will be available through the Apple Appstore.
 The app requires **iOS 13 or later**.
 
 ---
-### How To Run The Software
+# How To Run The Software
 The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software).
 
 ---
-### How To Use The Software
+# How To Use The Software
 
 > The software is still in development, all the incomplete features will be marked with **IP (In Progress)**
 ## Navigation Bar
@@ -35,7 +35,7 @@ Search bar allows users to search for items based on their title and description
 
 ## Listing Page (IP)
 The listing page is another way to see what users' have found. It would also show users' lost item report, allowing other users to acknowledge other lost items to possibly lookout for.
-## Item View (IP)
+### Item View (IP)
 The item view shows a slightly longer description of the item that is not visible in the smaller view.
 
 ## Create Report Page
@@ -46,7 +46,7 @@ When a user decides that they would like to claim an item, they will be directed
 
 ## Profile/Account Page (IP)
 Here, users can edit their profile picture, their profile name and information in relation to their account. If they are not signed-in, they will be able to sign-in using Google Authentication or sign-out if necessary. They will also be able to scroll through their current listings, both lost and found, as well as check for any potential matches for their lost items.
-## History & Activity Page (IP)
+### History & Activity Page (IP)
 After clicking on the icon where users can check their past history, they should be able to see past reports for found items and lost items that have been claimed/unclaimed. They should also be able to see any past potential matches.
 
 ---
