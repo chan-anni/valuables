@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
-import 'package:valuables/chat/chat_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:valuables/screens/chat_screen.dart';
@@ -117,7 +116,7 @@ class _ChatPageState extends State<ChatPage> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(
-        backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+        backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
         child: Icon(
           Icons.inventory_2_outlined,
           color: Theme.of(context).primaryColor,
@@ -187,7 +186,6 @@ class MyCustomFormState extends State<MyCustomForm> {
           onPressed: () {
             final newRoomId = textController.text.trim();
             if (newRoomId.isNotEmpty) {
-              print('Creating/Joining room: $newRoomId');
               textController.clear();
             }
           },

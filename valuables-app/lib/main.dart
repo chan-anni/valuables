@@ -13,11 +13,6 @@ import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
 import 'package:valuables/screens/chat_screen.dart';
-import "package:google_sign_in/google_sign_in.dart";
->>>>>>> b3d3cb0 (feat: chat page can create a chat room)
-import 'package:valuables/screens/lost_item_form.dart';
-import 'package:valuables/theme_controller.dart';
-// Theme controller is provided by theme_controller.dart
 import 'package:get_it/get_it.dart';
 import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';

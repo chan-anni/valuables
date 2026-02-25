@@ -1,10 +1,7 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_core/flutter_chat_core.dart' as chatCore;
+import 'package:flutter_chat_core/flutter_chat_core.dart' as chat_core;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:get_it/get_it.dart';
-import 'package:valuables/auth/auth_service.dart';
 import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,15 +16,12 @@ class ChatScreen extends StatefulWidget {
 }
 
 class ChatScreenState extends State<ChatScreen> {
-  final _chatController = chatCore.InMemoryChatController();
+  final _chatController = chat_core.InMemoryChatController();
   final _chatService = GetIt.I<ChatService>();
-  final _authService = GetIt.I<AuthService>();
   final _chatClient = GetIt.I<ChatClient>();
 
-  late final messages;
   Map<String, dynamic>? room;
   Map<String, dynamic>? user;
-  late RealtimeChannel _channel;
   final _supabase = Supabase.instance.client; // Add this
 
   bool _isLoading = true; // Add a loading flag
@@ -57,7 +51,7 @@ class ChatScreenState extends State<ChatScreen> {
       _isLoading = false;
     });
 
-    _channel = _chatClient.useRealtimeChat(
+    _chatClient.useRealtimeChat(
       roomId: widget.chatRoom,
       userId: user!['id'],
       onMessageReceived: handleIncomingMessage,
@@ -75,7 +69,7 @@ class ChatScreenState extends State<ChatScreen> {
       final List<dynamic> records = response as List<dynamic>;
 
       for (var record in records) {
-        final message = chatCore.TextMessage(
+        final message = chat_core.TextMessage(
           id: record['id'].toString(),
           authorId: record['author_id'],
           createdAt: DateTime.parse(record['created_at']).toUtc(),
@@ -107,8 +101,8 @@ class ChatScreenState extends State<ChatScreen> {
         chatController: _chatController,
         currentUserId: user!['id'], // Bracket notation
         onMessageSend: (text) => handleSend(text),
-        resolveUser: (chatCore.UserID id) async {
-          return chatCore.User(id: id, name: 'John Doe');
+        resolveUser: (chat_core.UserID id) async {
+          return chat_core.User(id: id, name: 'John Doe');
         },
       ),
     );
@@ -117,7 +111,7 @@ class ChatScreenState extends State<ChatScreen> {
   void handleSend(String text) async {
     if (text.trim().isEmpty) return;
 
-    final newMessage = chatCore.TextMessage(
+    final newMessage = chat_core.TextMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       authorId: user!['id'], // Bracket notation
       createdAt: DateTime.now().toUtc(),
@@ -132,7 +126,7 @@ class ChatScreenState extends State<ChatScreen> {
   void handleIncomingMessage(Map<String, dynamic> record) {
     if (record['author_id'] == user!['id']) return; // Bracket notation
 
-    final incomingMessage = chatCore.TextMessage(
+    final incomingMessage = chat_core.TextMessage(
       id: record['id'].toString(),
       authorId: record['author_id'],
       createdAt: DateTime.parse(record['created_at']).toUtc(),
