@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
 
 import 'register_page.dart';
@@ -12,7 +13,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   // Authentication service instance
-  final authService = AuthService();
+  final authService = GetIt.I<AuthService>();
 
   // Email input field controller
   final _emailController = TextEditingController();
@@ -60,7 +61,14 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           TextField(controller: _emailController),
           TextField(controller: _passwordController, obscureText: true),
-          ElevatedButton(onPressed: login, child: const Text("Login")),
+          ElevatedButton(
+            onPressed: login, 
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.secondary,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text("Login")
+          ),
           GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -72,6 +80,10 @@ class _LoginPageState extends State<LoginPage> {
           ),
           ElevatedButton(
             onPressed: loginWithGoogle,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+            ),
             child: const Text("Login with Google"),
           ),
         ],
