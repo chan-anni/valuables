@@ -2,11 +2,8 @@
 Valuables is a lost and found app platform that connects item owners and finders through a visual map interface. Through centering discovery around location, the app makes it easier for users to report found items, search for lost belongings, and coordinate safe retrieval. Now you can find your items without physically retracing your steps, or submit a lost item report when there is not trustworthy central desk!
 
 # How To Install The Software
-### Android:
-The app will be available in Apk for download. It will require at least **Android 5.0**.
-### iOS:
-This app will be available through the Apple Appstore.
-The app requires **iOS 13 or later**.
+Android: The app will be available in Apk for download. It will require at least **Android 5.0**.
+iOS: This app will be available through the Apple Appstore. The app requires **iOS 13 or later**.
 
 Additionally, for authentication, having a Google Account can link easily link the user to their profile (not required).
 
