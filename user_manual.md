@@ -35,7 +35,7 @@ Search Bar (IP): Search bar allows users to search for items based on their titl
 ### Listing Page
 The listing page is another way to see what users' have found. It would also show users' lost item report, allowing other users to acknowledge other lost items to possibly lookout for.
 
-Item View (IP): The item view shows a slightly longer description of the item that is not visible in the smaller view.
+Expanded Item View (IP): The item view shows a slightly longer description of the item that is not visible in the smaller view.
 
 ### Create Report Page
 When a user clicks the round plus button the navigation bar, they will be guided to a page where they can determine what kind of report they would like to fill out. After deciding on reporting a lost item or a found item, they will be asked to fill out information in regards to the item like a description of the item and a picture of the item (required for found items) that other users will be able to see when they click on a listing. Additionally, they will be asked to include the location of the item.
