@@ -23,12 +23,9 @@ Use the navigation bar to redirect to different pages within the application:
   
 ## Landing/Map Page
 In the map page, the user can navigate around and see the pins which represent the locations of where the corresponding item was found.
-  ### Pins
-  Each pin is a lost item reported by another user, clicking on it reveals more information about the item.
-  ### Item View
-  The item view shows its title, a description of what the item is, and a picture that allows the user to identify the object.
-  ### Search Bar (IP)
-  Search bar allows users to search for items based on their title and description.
+Pins: Each pin is a lost item reported by another user, clicking on it reveals more information about the item.
+Item View: The item view shows its title, a description of what the item is, and a picture that allows the user to identify the object.
+Search Bar (IP): Search bar allows users to search for items based on their title and description.
 
 ## Listing Page (IP)
 The listing page is another way to see what users' have found. It would also show users' lost item report, allowing other users to acknowledge other lost items to possibly lookout for.
