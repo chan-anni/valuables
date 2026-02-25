@@ -6,6 +6,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/home_page.dart';
 import 'package:valuables/pages/profile_page.dart';
 import 'package:valuables/pages/history_page.dart';
+import 'package:valuables/auth/auth_service.dart';
+import 'package:valuables/chat/chat_client.dart';
+import 'package:valuables/chat/chat_service.dart';
+import 'package:valuables/pages/chat_page.dart';
+import 'package:valuables/screens/chat_screen.dart';
+import 'package:get_it/get_it.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 // Theme controller is provided by theme_controller.dart
@@ -15,9 +21,21 @@ Future<void> main() async {
 
   // Load .env and initialize Supabase in the background (non-blocking).
   unawaited(_initializeAsync());
+  setupLocator();
 
-  // Start the UI immediately.
   runApp(MyApp());
+}
+
+void setupLocator() {
+  final getIt = GetIt.instance;
+
+  // Register AuthService FIRST if ChatService depends on it
+  getIt.registerLazySingleton<AuthService>(() => AuthService());
+
+  // Register ChatService
+  getIt.registerLazySingleton<ChatService>(() => ChatService());
+
+  getIt.registerLazySingleton<ChatClient>(() => ChatClient());
 }
 
 Future<void> _initializeAsync() async {
@@ -45,7 +63,10 @@ Future<void> _initializeAsync() async {
       debugPrint('_initializeAsync: initializing Supabase');
       try {
         // Use a timeout to prevent hanging.
-        await Supabase.initialize(url: url, anonKey: key).timeout(const Duration(seconds: 10));
+        await Supabase.initialize(
+          url: url,
+          anonKey: key,
+        ).timeout(const Duration(seconds: 10));
         supabaseInitializedNotifier.value = true;
         debugPrint('_initializeAsync: Supabase initialized successfully');
       } on TimeoutException catch (e) {
@@ -53,7 +74,9 @@ Future<void> _initializeAsync() async {
         supabaseInitializedNotifier.value = false;
       }
     } else {
-      debugPrint('_initializeAsync: Supabase env vars missing; skipping initialize');
+      debugPrint(
+        '_initializeAsync: Supabase env vars missing; skipping initialize',
+      );
     }
   } catch (e) {
     debugPrint('_initializeAsync: Supabase.initialize failed: $e');
@@ -69,16 +92,35 @@ class MyApp extends StatelessWidget {
     const Color deepPurple = Color(0xFF5E2B8A);
     const Color goldColor = Color(0xFFFBC02D); // Darker yellow for contrast
     final lightTheme = ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: deepPurple,
+        primary: deepPurple,
+        secondary: goldColor,
+        tertiary: goldColor,
+      ),
       scaffoldBackgroundColor: Colors.white,
-      appBarTheme: const AppBarTheme(backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
       useMaterial3: true,
     );
     final darkTheme = ThemeData(
       brightness: Brightness.dark,
-      colorScheme: ColorScheme.fromSeed(seedColor: deepPurple, primary: deepPurple, secondary: goldColor, tertiary: goldColor, brightness: Brightness.dark),
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: deepPurple,
+        primary: deepPurple,
+        secondary: goldColor,
+        tertiary: goldColor,
+        brightness: Brightness.dark,
+      ),
       scaffoldBackgroundColor: const Color(0xFF1E1E1E), // Dark Gray
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF1E1E1E), foregroundColor: Colors.white, elevation: 0),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF1E1E1E),
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
       useMaterial3: true,
       cardColor: const Color(0xFF1E1E1E),
     );
@@ -122,7 +164,7 @@ class _NavigationState extends State<Navigation> {
     const MapPage(),
     const HomePage(),
     const SizedBox.shrink(), // placeholder for center FAB
-    const MessagePage(),
+    const ChatPage(),
     const ProfilePage(),
   ];
 
@@ -130,11 +172,9 @@ class _NavigationState extends State<Navigation> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Valuables'),
-      ),
+      appBar: AppBar(title: const Text('Valuables')),
       body: pages[currentPageIndex],
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -147,11 +187,7 @@ class _NavigationState extends State<Navigation> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               // Map
-              _buildNavItem(
-                context,
-                icon: Icons.pin_drop_rounded,
-                index: 0,
-              ),
+              _buildNavItem(context, icon: Icons.pin_drop_rounded, index: 0),
               // Listings
               _buildNavItem(
                 context,
@@ -166,7 +202,11 @@ class _NavigationState extends State<Navigation> {
                   backgroundColor: colorScheme.primary,
                   elevation: 4,
                   shape: const CircleBorder(),
-                  child: const Icon(Icons.add_rounded, size: 36, color: Colors.white),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    size: 36,
+                    color: Colors.white,
+                  ),
                 ),
               ),
               // Messages (with badge placeholder)
@@ -180,7 +220,9 @@ class _NavigationState extends State<Navigation> {
                     onTap: () {
                       if (!supabaseInitializedNotifier.value) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Initializing... please wait.')),
+                          const SnackBar(
+                            content: Text('Initializing... please wait.'),
+                          ),
                         );
                         return;
                       }
@@ -194,16 +236,12 @@ class _NavigationState extends State<Navigation> {
                       } catch (e) {
                         // Handle potential errors if client isn't ready despite check
                       }
-                    }
+                    },
                   ),
                 ],
               ),
               // Account/Profile
-              _buildNavItem(
-                context,
-                icon: Icons.person_rounded,
-                index: 4,
-              ),
+              _buildNavItem(context, icon: Icons.person_rounded, index: 4),
             ],
           ),
         ),
@@ -211,24 +249,35 @@ class _NavigationState extends State<Navigation> {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, {required IconData icon, required int index, VoidCallback? onTap}) {
+  Widget _buildNavItem(
+    BuildContext context, {
+    required IconData icon,
+    required int index,
+    VoidCallback? onTap,
+  }) {
     final isSelected = currentPageIndex == index;
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return InkWell(
       onTap: onTap ?? () => setPageIndex(index),
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? (isDark ? Colors.grey[800] : colorScheme.primary.withValues(alpha: 0.15)) : Colors.transparent,
+          color: isSelected
+              ? (isDark
+                    ? Colors.grey[800]
+                    : colorScheme.primary.withValues(alpha: 0.15))
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Icon(
           icon,
           size: 28,
-          color: isSelected ? (isDark ? Colors.grey[300] : colorScheme.primary) : Colors.grey,
+          color: isSelected
+              ? (isDark ? Colors.grey[300] : colorScheme.primary)
+              : Colors.grey,
         ),
       ),
     );
@@ -242,13 +291,19 @@ class _NavigationState extends State<Navigation> {
         title: const Text('Sign in required'),
         content: const Text('You must be signed in to access this feature.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white : null))),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: isDark ? Colors.white : null),
+            ),
+          ),
           FilledButton(
-            onPressed: () { 
-              Navigator.pop(context); 
+            onPressed: () {
+              Navigator.pop(context);
               setPageIndex(4); // Go to profile/login
-            }, 
-            child: const Text('Sign in')
+            },
+            child: const Text('Sign in'),
           ),
         ],
       ),
@@ -280,14 +335,25 @@ class _NavigationState extends State<Navigation> {
             children: [
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24.0),
-                child: Text('What would you like to report?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                child: Text(
+                  'What would you like to report?',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LostItemForm(forceType: 'lost')));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LostItemForm(forceType: 'lost'),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -303,10 +369,22 @@ class _NavigationState extends State<Navigation> {
                             color: isDark ? Colors.grey[800] : Colors.grey[200],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.help_outline, color: isDark ? Colors.white : Theme.of(context).colorScheme.primary, size: 32),
+                          child: Icon(
+                            Icons.help_outline,
+                            color: isDark
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.primary,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(width: 16),
-                        const Text('Report Lost Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Report Lost Item',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const Spacer(),
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
@@ -315,11 +393,19 @@ class _NavigationState extends State<Navigation> {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: InkWell(
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const LostItemForm(forceType: 'found')));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const LostItemForm(forceType: 'found'),
+                      ),
+                    );
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -335,10 +421,22 @@ class _NavigationState extends State<Navigation> {
                             color: isDark ? Colors.grey[800] : Colors.grey[200],
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.location_on, color: isDark ? Colors.white : Theme.of(context).colorScheme.secondary, size: 32),
+                          child: Icon(
+                            Icons.location_on,
+                            color: isDark
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.secondary,
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(width: 16),
-                        const Text('Report Found Item', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                        const Text(
+                          'Report Found Item',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         const Spacer(),
                         const Icon(Icons.chevron_right, color: Colors.grey),
                       ],
@@ -364,7 +462,8 @@ class MapPage extends StatefulWidget {
 
 // Map page -- needs API key
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
   Future<void>? _addMarkersFuture;
 
   @override
@@ -390,8 +489,8 @@ class _MapPageState extends State<MapPage> {
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746
-    );
+    zoom: 14.4746,
+  );
 
   final Set<Marker> _markers = <Marker>{};
 
@@ -402,87 +501,99 @@ class _MapPageState extends State<MapPage> {
       final data = await Supabase.instance.client.from('items').select();
 
       for (var item in data) {
-        if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
+        if (item['id'] == null ||
+            item['location_lat'] == null ||
+            item['location_lng'] == null ||
             item['title'] == null) {
           continue;
         }
 
         final rawDescription = item['description'];
-        final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
+        final description =
+            (rawDescription == null || rawDescription.toString().trim().isEmpty)
             ? 'No description added'
             : rawDescription.toString();
-            
+
         Marker newMarker = Marker(
           markerId: MarkerId(item['id'].toString()),
           position: LatLng(item['location_lat'], item['location_lng']),
           onTap: () {
-            showModalBottomSheet(context: context, 
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            builder: (BuildContext context){
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(item['title'],
-                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                        textAlign: TextAlign.left,
-                        maxLines: 2,
+            showModalBottomSheet(
+              context: context,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              builder: (BuildContext context) {
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            item['title'],
+                            style: DefaultTextStyle.of(
+                              context,
+                            ).style.apply(fontSizeFactor: 1.6),
+                            textAlign: TextAlign.left,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                    (item['image_url'] != null &&
+                            (item['image_url'] as String).isNotEmpty)
+                        ? Image.network(
+                            item['image_url'],
+                            height: 200,
+                            width: 200,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress != null) {
+                                return SizedBox(
+                                  height: 200,
+                                  width: 200,
+                                  child: CircularProgressIndicator(),
+                                );
+                              } else {
+                                return child;
+                              }
+                            },
+                          )
+                        : Container(
+                            height: 200,
+                            width: 200,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image_not_supported),
+                          ),
+                    Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        description,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => {startClaim(item['id'])},
+                      icon: const Icon(Icons.add),
+                      label: const Text('Submit Claim'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
-                  (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
-                    ? Image.network(
-                    item['image_url'], 
-                    height: 200, width: 200, 
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress != null) {
-                        return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
-                      } else {
-                        return child;
-                      }
-                    },
-                    )
-                    : Container(
-                              height: 200,
-                              width: 200,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.image_not_supported),
-                            ),
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(description,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LostItemForm()),
-                      );
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Submit Claim'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              );
-              }
+                  ],
+                );
+              },
             );
           },
         );
@@ -497,40 +608,76 @@ class _MapPageState extends State<MapPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder(
-        future: _addMarkersFuture, 
+        future: _addMarkersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                  child:
-                      CircularProgressIndicator()); // Show loading spinner while markers load
-            } else if (snapshot.hasError) {
-              return Center(
-                  child: Text(
-                      'Error: ${snapshot.error}')); // Display error if marker loading fails
-            } else {
-              return GoogleMap(
-                initialCameraPosition: startPos,
-                markers: _markers,
-                onMapCreated: (GoogleMapController controller) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            ); // Show loading spinner while markers load
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Text('Error: ${snapshot.error}'),
+            ); // Display error if marker loading fails
+          } else {
+            return GoogleMap(
+              initialCameraPosition: startPos,
+              markers: _markers,
+              onMapCreated: (GoogleMapController controller) {
+                _controller.complete(controller);
+                if (!_controller.isCompleted) {
                   _controller.complete(controller);
-                  if (!_controller.isCompleted) {
-                    _controller.complete(controller);
-                  }
-                },
-              );
-            }
-        }
-        
-        ),
+                }
+              },
+            );
+          }
+        },
+      ),
     );
   }
-}
 
-class MessagePage extends StatelessWidget {
-  const MessagePage({super.key});
+  Future<void> startClaim(String itemId) async {
+    final chatService = GetIt.I<ChatService>();
+    final authService = GetIt.I<AuthService>();
+    final supabase = Supabase.instance.client;
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Messages'));
+    try {
+      // 1. Get the current user (The "Claimer")
+      final currentUser = authService.getCurrentUserSession()?.user;
+      if (currentUser == null) return;
+
+      // 2. Fetch the Item Holder's ID (The "Owner")
+      // We use .single() because we only expect one owner per item
+      final itemData = await supabase
+          .from("items")
+          .select("user_id")
+          .eq('id', itemId)
+          .single();
+
+      final String ownerId = itemData['user_id'];
+
+      // 3. Create the Room and get the new Room ID
+      // Note: I updated ChatService to return the room ID earlier
+      final room = await chatService.createRoom("Claim for Item $itemId");
+      if (room == null) return;
+
+      final String roomId = room['id'];
+
+      // 4. Add both users to the room
+      // Assuming your addUsersToRoom now accepts a List of IDs or Users
+      await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
+
+      // 5. Navigate to the chat
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => ChatScreen(chatRoom: roomId),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Failed to start claim: $e");
+      // Show an error snackbar here if you like
+    }
   }
 }

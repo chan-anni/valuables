@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -10,7 +11,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   // Authentication service instance
-  final authService = AuthService();
+  final authService = GetIt.I<AuthService>();
 
   // User personal email controller
   final _emailController = TextEditingController();
