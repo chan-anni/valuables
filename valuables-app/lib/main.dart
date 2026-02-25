@@ -24,6 +24,7 @@ Future<void> main() async {
   unawaited(_initializeAsync());
   setupLocator();
 
+  // Start the UI immediately.
   runApp(MyApp());
 }
 
