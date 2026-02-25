@@ -171,3 +171,5 @@ third_party/gn/
 .pub-cache/
 # Android related
 **/android/.gradle
+
+.obsidian/

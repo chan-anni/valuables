@@ -21,7 +21,7 @@ class ChatService {
 
       return data;
     } catch (e) {
-      return null;
+      rethrow;
     }
   }
 

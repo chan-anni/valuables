@@ -78,7 +78,11 @@ class ChatScreenState extends State<ChatScreen> {
         _chatController.insertMessage(message);
       }
     } catch (e) {
-      debugPrint("Error loading history: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error loading history: $e")));
+      }
     }
   }
 
@@ -102,7 +106,7 @@ class ChatScreenState extends State<ChatScreen> {
         currentUserId: user!['id'], // Bracket notation
         onMessageSend: (text) => handleSend(text),
         resolveUser: (chat_core.UserID id) async {
-          return chat_core.User(id: id, name: 'John Doe');
+          return chat_core.User(id: id, name: user!["id"]);
         },
       ),
     );
