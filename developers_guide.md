@@ -167,6 +167,49 @@ Every time packages change, you should run the following to keep updated:
 flutter clean
 flutter pub get
 ```
+There are two options to where you can run the app:
+
+### Using an Emmulator
+
+**iOS emmulator**
+
+Ensure you already have XCode installed on your computer and set up. For detailed instructions, we recommend you follow the [Flutter docs for iOS development](https://docs.flutter.dev/platform-integration/ios/setup). Then run the following command: 
+```
+open -a Simulator
+```
+This starts the simmulator. From there you should be able to pick which type of device you want to use. Then, when running the flutter project you should be able to have choose the emmulator.
+
+### Using Your Physical Device
+
+To run the app on a physical device, you need a data transfer cable (USB) that connects to your phone and computer.
+
+**Android:**
+1. On your Android device, [enable developer options](https://stackoverflow.com/questions/54444538/how-do-i-run-test-my-flutter-app-on-a-real-device). This may vary slightly across Android versions, but should involve pressing the **Build Number** option seven times.
+2. A "Developer Options" option should come up, allowing you to "enable USB Debugging.
+3. Plug in your device to the computer using the USB cable. You may see a pop-up that tells you the device is connected.
+4. Run the following command to check your devices for Flutter to run on:
+```
+   flutter devices
+```
+Then, when you run your app, it should allow you to select your specific Android app to run on. 
+
+Another way you can configure your app is by installing the Flutter, the Flutter extension for VS Code and Android SDK. 
+**iOS**
+
+Similarily to when running the iOS simmulator, you want to have Xcode installed and set up. For detailed instructions, we recommend you follow the [Flutter docs for iOS development](https://docs.flutter.dev/platform-integration/ios/setup). You will need an Apple ID or sign up with a developer accound. Once you have configured Xcode's iOS tooling, do the following.
+
+In Xcode: 
+1. Open ios/Runner .xcworkspace
+2. Select the Runner project in the left sidebar and go to the Signing & Capabilities tab, and select a "Team" (select your Apple ID)
+
+Then on your phone:
+1. Connect your iOS device to the computer using a USB cable. This should cause a pop-up to appear asking to trust the computer. Click **Trust**.
+2. Apple requires developer mode to run the app. Navigate to on Settings > Privacy & Security > Developer Mode. 
+3. Tap to toggle Developer Mode to On.
+4. Restart the device
+5. When the prompt to turn on developer mode appears, tap Turn On.
+
+
 ## Testing 
 ### Running Tests
 All tests live in test/, mirroring the structure of lib/. Test files must end in _test.dart.
