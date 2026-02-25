@@ -20,7 +20,7 @@ Use the navigation bar to redirect to different pages within the application:
   - [Landing/Map Page](#landing/map-page)
   - [Listing Page](#listing-page)
   - [Create Report Page](#create-report-page)
-  - [Messages Page](#messages-page)
+  - [Messages Page](#messages-page-(IP))
   - [Profile page](#profile/account-page)
   
 ### Landing/Map Page
