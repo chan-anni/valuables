@@ -16,9 +16,10 @@ The user can just open the app and it will be functional for use as long as they
 ## Navigation Bar
 Use the navigation bar to redirect to different pages within the application:
   - [Landing/Map Page](#landing/map-page)
-  - [Listing Page]()
-  - [Create Report Page]()
-  - [Messages Page]()
+  - [Listing Page](#listing-page)
+  - [Create Report Page](#create-report-page)
+  - [Messages Page](#messages-page)
+  - [Profile page](#profile/account-page)
   
 ## Landing/Map Page
 In the map page, the user can navigate around and see the pins which represent the locations of where the corresponding item was found.
