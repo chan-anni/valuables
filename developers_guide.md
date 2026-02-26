@@ -79,7 +79,7 @@ Google Maps — platform-level key registration
 
 google_maps_flutter requires the API key to be registered natively on each platform, in addition to .env.
 #### Android
-Add inside <application> in android/app/src/main/AndroidManifest.xml (you may have to make this file):
+Add inside <application> in android/app/src/main/AndroidManifest.xml (you may have to make this file). Replace the API key in the file in on the line "android:value="API_KEY_HERE":
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
@@ -124,7 +124,7 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml (you may ha
 ```
 DO NOT commit this file. It should already be in the .gitignore. 
 ### iOS
-Add ios/Runner/AppDelegate.swift (you may have to make this file):
+Add ios/Runner/AppDelegate.swift (you may have to make this file). Replace the API key where it says "Google Maps API Key here":
 ```swift
 
 import UIKit
