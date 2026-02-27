@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'package:google_places_api_flutter/google_places_api_flutter.dart' as places;
 
 class MapPickerResult {
   final double lat;
@@ -52,8 +53,6 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   LatLng? _pickedLocation;
   String _locationName = 'Tap on the map to select a location';
   bool _isLoadingLocation = false;
-  bool _isSearching = false;
-  List<Location> _searchResults = [];
   final Map<String, String> _locationNames = {}; // Cache for location names
   Timer? _debounceTimer;
 
@@ -71,10 +70,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     if (widget.initialLat != null && widget.initialLng != null) {
       _pickedLocation = LatLng(widget.initialLat!, widget.initialLng!);
     }
-    // If tests injected initial search results or names, wire them into state
-    if (widget.initialSearchResults != null) {
-      _searchResults = widget.initialSearchResults!;
-    }
+    // If tests injected initial names, wire them into state
     if (widget.initialLocationNames != null) {
       _locationNames.addAll(widget.initialLocationNames!);
     }
@@ -175,74 +171,6 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     }
   }
 
-  // This is for seaching based on user typing a location in the search bar.
-  // Converts the addresses to the geolocations as coordinates before updating map
-  Future<void> _searchLocation(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() => _searchResults = []);
-      return;
-    }
-
-    setState(() => _isSearching = true);
-
-    try {
-      final locations = await locationFromAddress(query);
-      if (mounted) {
-        setState(() => _searchResults = locations);
-
-        // Pre-fetch location names for all results
-        _locationNames.clear();
-        for (var loc in locations) {
-          final key = '${loc.latitude},${loc.longitude}';
-          try {
-            final placemarks = await placemarkFromCoordinates(
-              loc.latitude,
-              loc.longitude,
-            );
-            if (placemarks.isNotEmpty) {
-              final place = placemarks.first;
-              final parts = [
-                place.name,
-                place.locality,
-                place.administrativeArea,
-                place.country,
-              ].where((part) => part != null && part.isNotEmpty).toList();
-              _locationNames[key] = parts.join(', ');
-            } else {
-              _locationNames[key] = 'Unknown Location';
-            }
-          } catch (e) {
-            _locationNames[key] = 'Unknown Location';
-          }
-        }
-        if (mounted) setState(() {});
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _searchResults = []); // no related results found
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('No results found')));
-      }
-    } finally {
-      if (mounted) setState(() => _isSearching = false);
-    }
-  }
-
-  // When a user selects a search result, this method updates the map to center on
-  // the selected location and updates the picked location state accordingly.
-  Future<void> _selectSearchResult(Location location) async {
-    final latLng = LatLng(location.latitude, location.longitude);
-
-    _searchController.clear();
-    setState(() => _searchResults = []);
-    FocusScope.of(context).unfocus();
-
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
-
-    await _updatePickedLocation(latLng);
-  }
-
   // If user confirms the location chosen we return the latitude, longitude and location
   // to user. If no location is picked we return a snackbar message saying no location is chosen
   // and to choose one.
@@ -263,19 +191,6 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         locationName: _locationName,
       ),
     );
-  }
-
-  String _getLocationName(Location loc) {
-    final key = '${loc.latitude},${loc.longitude}';
-    return _locationNames[key] ??
-        '${loc.latitude.toStringAsFixed(5)}, ${loc.longitude.toStringAsFixed(5)}';
-  }
-
-  void _onSearchChanged(String query) {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      _searchLocation(query);
-    });
   }
 
   // Constructing basic UI for the map picker screen. Includes the Google Maps widget,
@@ -320,74 +235,82 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             top: 12,
             left: 12,
             right: 12,
-            child: Column(
-              children: [
-                Material(
+            child: places.PlaceSearchField(
+              apiKey: "API_KEY_HERE",
+              isLatLongRequired: true,
+              debounceDuration: const Duration(milliseconds: 400),
+              hideOnEmpty: true,
+              hideOnSelect: true,
+              constraints: const BoxConstraints(maxHeight: 200),
+
+              builder: (context, controller, focusNode) {
+                return Material(
                   elevation: 4,
                   borderRadius: BorderRadius.circular(8),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search for a location...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _isSearching
-                          ? const Padding(
-                              padding: EdgeInsets.all(12),
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                            )
-                          : _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchResults = []);
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onChanged: _onSearchChanged,
-                    onSubmitted: _searchLocation,
-                  ),
-                ),
-
-                // Search results dropdown
-                if (_searchResults.isNotEmpty)
-                  Material(
-                    elevation: 4,
-                    borderRadius: BorderRadius.circular(8),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxHeight: 200),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          itemCount: _searchResults.length,
-                          separatorBuilder: (_, _) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final loc = _searchResults[index];
-                            return ListTile(
-                              leading: Icon(
-                                Icons.location_on,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                              title: Text(_getLocationName(loc)),
-                              onTap: () => _selectSearchResult(loc),
-                            );
-                          },
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (_, __, ___) {
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search for a location...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: controller.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: controller.clear,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
-              ],
+                );
+              },
+
+              decorationBuilder: (context, child) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: child,
+                  ),
+                );
+              },
+
+              itemSeparatorBuilder: (_, __) => const Divider(height: 1),
+
+              itemBuilder: (context, prediction) => ListTile(
+                leading: Icon(
+                  Icons.location_on,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                title: Text(
+                  prediction.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              onPlaceSelected: (prediction, details) async {
+                final loc = details?.result.geometry?.location;
+                if (loc == null) return;
+
+                final latLng = LatLng(loc.lat, loc.lng);
+
+                FocusScope.of(context).unfocus();
+
+                // Move the map, set marker, and set name
+                _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
+                setState(() {
+                  _pickedLocation = latLng;
+                  _locationName = prediction.description;
+                });
+              },
             ),
           ),
 
