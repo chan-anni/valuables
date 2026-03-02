@@ -172,15 +172,23 @@ flutter pub get
 ```
 There are two options to where you can run the app:
 
-### Using an Emmulator
+### Using an Emulator
 
-**iOS emmulator**
+**Android emulator**
+
+Ensure you already have the Android SDK, with Android Studio and Android Emulator installed. For detailed instructions on how to set up, follow the [Flutter docs for Android development](https://docs.flutter.dev/platform-integration/android/setup). Make sure to choose your relevant development platform. When your setup is finished, you can run the following command:
+```
+flutter emulators && flutter devices
+```
+This validates the devices/emulators you can run the app on. You should have at least 1 output that is a platform marked as Android. Then, when running the Flutter project (using 'flutter run'), you should be able to choose the emulator and launch the program.
+
+**iOS emulator**
 
 Ensure you already have XCode installed on your computer and set up. For detailed instructions, we recommend you follow the [Flutter docs for iOS development](https://docs.flutter.dev/platform-integration/ios/setup). Then run the following command: 
 ```
 open -a Simulator
 ```
-This starts the simmulator. From there you should be able to pick which type of device you want to use. Then, when running the flutter project you should be able to have choose the emmulator.
+This starts the simulator. From there, you should be able to pick which type of device you want to use. Then, when running the Flutter project (using 'flutter run'), you should be able to choose the emulator.
 
 ### Using Your Physical Device
 
@@ -196,10 +204,10 @@ To run the app on a physical device, you need a data transfer cable (USB) that c
 ```
 Then, when you run your app, it should allow you to select your specific Android app to run on. 
 
-Another way you can configure your app is by installing the Flutter, the Flutter extension for VS Code and Android SDK. 
+Another way you can configure your app is by installing Flutter, the Flutter extension for VS Code and Android SDK. 
 **iOS**
 
-Similarily to when running the iOS simmulator, you want to have Xcode installed and set up. For detailed instructions, we recommend you follow the [Flutter docs for iOS development](https://docs.flutter.dev/platform-integration/ios/setup). You will need an Apple ID or sign up with a developer accound. Once you have configured Xcode's iOS tooling, do the following.
+Similarly to when running the iOS simulator, you want to have Xcode installed and set up. For detailed instructions, we recommend you follow the [Flutter docs for iOS development](https://docs.flutter.dev/platform-integration/ios/setup). You will need an Apple ID or sign up with a developer account. Once you have configured Xcode's iOS tooling, do the following.
 
 In Xcode: 
 1. Open ios/Runner .xcworkspace
@@ -207,7 +215,7 @@ In Xcode:
 
 Then on your phone:
 1. Connect your iOS device to the computer using a USB cable. This should cause a pop-up to appear asking to trust the computer. Click **Trust**.
-2. Apple requires developer mode to run the app. Navigate to on Settings > Privacy & Security > Developer Mode. 
+2. Apple requires developer mode to run the app. Navigate to Settings > Privacy & Security > Developer Mode. 
 3. Tap to toggle Developer Mode to On.
 4. Restart the device
 5. When the prompt to turn on developer mode appears, tap Turn On.
@@ -225,14 +233,14 @@ Run a specific test file
 ```
 flutter test test/services/location_service_test.dart
 ```
-Run tests will code coverage
+Run tests with code coverage
 ```
 flutter test --coverage
 ```
 This creates/overwrites coverage/lcov.info. 
 
 ### Adding Tests
-All tests files must end in _test.dart (e.g main_test.dart) for the runner to recognize them. 
+All test files must end in _test.dart (e.g main_test.dart) for the runner to recognize them. 
 The test folder should mirror the lib/ directory. 
 In test files themselves, use test() for logic and testWidgets() for UI components. 
 Tests requiring Supabase interaction may require a valid .env file or will use mocked responses defined in the test/ directory.
@@ -252,7 +260,7 @@ We use GitHub Actions to automate the validation of every pull request and push 
 
 Whenever you submit a Pull Request, the following checks are triggered automatically:
 
-Static Analysis: The pipeline runs flutter analyze to catch potential bugs, style issues, and type mismatches.
+Static Analysis: The pipeline runs Flutter analyze to catch potential bugs, style issues, and type mismatches.
 
 Unit & Widget Tests: All tests in the test/ directory are executed using flutter test.
 
