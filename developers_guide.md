@@ -1,4 +1,5 @@
 # Developer Guidelines
+**Important:** The following set up instructions and development environment are intended strictly for iOS and Android mobile platforms. Desktop or web configurations are not supported for this specific project.
 These guidelines are intended for developers who wish to contribute to the Valuables project. For easier navigation, use the table of contents below:
 
 * [Setting Up](#setting-up)
@@ -28,6 +29,8 @@ This project requires:
 |Flutter               |               ---|
 |XCode (ios/macOS      |             15.0+|
 |CocoaPods (ios/macOS) |           1.14.0+|
+|Android Studio        |    Latest version|
+|Android Emulator      |Android Virtual Device API 33+|
 
 After installing flutter, you can verify your environment is healthy using
 ```
