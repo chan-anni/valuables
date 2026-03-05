@@ -13,11 +13,15 @@ import 'package:get_it/get_it.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 import 'screens/map_page.dart';
+import 'package:valuables/notifs/local_notifs.dart';
+import 'package:valuables/notifs/match_service.dart';
+import 'package:valuables/notifs/notif_handler.dart';
+
 // Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await setupNotifications();
   // Load .env and initialize Supabase in the background (non-blocking).
   unawaited(_initializeAsync());
   setupLocator();
@@ -68,6 +72,7 @@ Future<void> _initializeAsync() async {
         ).timeout(const Duration(seconds: 10));
         supabaseInitializedNotifier.value = true;
         debugPrint('_initializeAsync: Supabase initialized successfully');
+        // MatchService.listenForMatches();
       } on TimeoutException catch (e) {
         debugPrint('_initializeAsync: Supabase.initialize timed out: $e');
         supabaseInitializedNotifier.value = false;
@@ -128,6 +133,7 @@ class MyApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: mode,
@@ -151,6 +157,30 @@ class Navigation extends StatefulWidget {
 
 class _NavigationState extends State<Navigation> {
   int currentPageIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.initialSession) {
+        MatchService.listenForMatches();
+      } else if (event == AuthChangeEvent.signedOut) {
+        MatchService.dispose();
+      }
+    });
+
+    if (Supabase.instance.client.auth.currentUser != null) {
+      MatchService.listenForMatches();
+    }
+  }
+
+  @override
+  void dispose() {
+    MatchService.dispose();
+    super.dispose();
+  }
 
   void setPageIndex(int index) {
     setState(() {
