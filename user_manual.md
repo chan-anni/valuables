@@ -1,11 +1,11 @@
 # Introduction
-Valuables is a lost and found app platform that connects item owners and finders through a visual map interface. Through centering discovery around location, the app makes it easier for users to report found items, search for lost belongings, and coordinate safe retrieval. Now you can find your items without physically retracing your steps, or submit a lost item report when there is not trustworthy central desk!
+Valuables is a lost and found app platform that connects item owners and finders through a visual map interface. Through centering discovery around location, the app makes it easier for users to report found items, search for lost belongings, and coordinate safe retrieval. Now you can find your items without physically retracing your steps, or submit a lost item report when there is not a trustworthy central desk!
 
 # How To Install The Software
 ## Android
 The app will be available in Apk for download. It will require at least **Android 5.0**
 ## iOS
-Through Appstore once it is launched
+Through Appstore once it is launched. 
 The app requires **iOS 15 or later**
 
 # How To Run The Software
@@ -27,7 +27,7 @@ Use the navigation bar to redirect to different pages within the application:
 ![Map page picture](Map.jpg)\
 In the map page, the user can navigate around and see the pins which represent the locations of where the corresponding item was found.
 
-Pins: Each pin is am item reported by another user, clicking on it reveals more information about the item.
+Pins: Each pin is an item reported by another user, clicking on it reveals more information about the item.
 
 Item View: The item view shows its title, a description of what the item is, and a picture that allows the user to identify the object.
 
@@ -35,14 +35,14 @@ Search Bar (IP): Search bar allows users to search for items based on their titl
 
 ### Listing Page
 ![Listing page picture](/user_manual_pics/Listing.jpg)\
-The listing page is another way to see what users' have found. It would also show users' lost item report, allowing other users to acknowledge other lost items to possibly lookout for. Users can scroll through all the active items in order to find what they may be looking for.
+The listing page is another way to see what users have found. It would also show users' lost item reports, allowing other users to acknowledge other lost items to possibly lookout for. Users can scroll through all the active items in order to find what they may be looking for.
 
 Expanded Item View (IP): The item view shows a slightly longer description of the item that is not visible in the smaller view.
 
 ### Create Report Page
 ![Report selection picture](/user_manual_pics/Report1.jpg)
 ![Report page picture](/user_manual_pics/Report2.jpg)\
-When a user clicks the round plus button the navigation bar, they will be guided to choose what kind of report they would like to fill out. After deciding on reporting a lost item or a found item, they will be asked to fill out information in regards to the item like a description of the item and a picture of the item (required for found items) that other users will be able to see when they click on a listing. Additionally, they will be asked to include the location of the item.
+When a user clicks the round plus button in the navigation bar, they will be guided to choose what kind of report they would like to fill out. After deciding on reporting a lost item or a found item, they will be asked to fill out information in regards to the item like a description of the item and a picture of the item (required for found items) that other users will be able to see when they click on a listing. Additionally, they will be asked to include the location of the item.
 
 ### Messages Page (IP)
 ![Inbox page picture](/user_manual_pics/Chat1.jpg)
@@ -56,7 +56,7 @@ Here, users can edit their profile picture, their profile name and information i
 History & Activity Page (IP): After clicking on the icon where users can check their past history, they should be able to see past reports for found items and lost items that have been claimed/unclaimed. They should also be able to see any past potential matches between an item they have lost and other uploaded items.
 
 # How to report a bug
-User can access the [GitHub repository](https://github.com/chan-anni/valuables/issues) and create a issue to indicate a specific bug.
+A user can access the [GitHub repository](https://github.com/chan-anni/valuables/issues) and create an issue to indicate a specific bug.
 Details that should be included in the report:
 - Enter a **clear unique summary**.
 - **Steps to reproduce a bug, expected results** and **actual results**

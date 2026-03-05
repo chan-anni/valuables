@@ -27,7 +27,7 @@ This project requires:
 |----------------------|------------------|
 |Dart SDK              |           ^3.10.7|
 |Flutter               |               ---|
-|XCode (ios/macOS      |             15.0+|
+|XCode (ios/macOS)     |             15.0+|
 |CocoaPods (ios/macOS) |           1.14.0+|
 |Android Studio        |    Latest version|
 |Android Emulator      |Android Virtual Device API 33+|
