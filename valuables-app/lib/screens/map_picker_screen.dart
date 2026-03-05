@@ -250,7 +250,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                   borderRadius: BorderRadius.circular(8),
                   child: ValueListenableBuilder<TextEditingValue>(
                     valueListenable: controller,
-                    builder: (_, __, ___) {
+                    builder: (_, _, _) {
                       return TextField(
                         controller: controller,
                         focusNode: focusNode,
@@ -283,7 +283,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                 );
               },
 
-              itemSeparatorBuilder: (_, __) => const Divider(height: 1),
+              itemSeparatorBuilder: (_, _) => const Divider(height: 1),
 
               itemBuilder: (context, prediction) => ListTile(
                 leading: Icon(
