@@ -74,8 +74,6 @@ class _ChatPageState extends State<ChatPage> {
       appBar: AppBar(title: const Text("Messages"), elevation: 0),
       body: Column(
         children: [
-          const Padding(padding: EdgeInsets.all(16.0), child: MyCustomForm()),
-          const Divider(height: 1),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -139,59 +137,6 @@ class _ChatPageState extends State<ChatPage> {
           ),
         );
       },
-    );
-  }
-}
-
-class MyCustomForm extends StatefulWidget {
-  const MyCustomForm({super.key});
-
-  @override
-  MyCustomFormState createState() => MyCustomFormState();
-}
-
-class MyCustomFormState extends State<MyCustomForm> {
-  final TextEditingController textController = TextEditingController();
-
-  @override
-  void dispose() {
-    textController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: TextFormField(
-            controller: textController,
-            decoration: InputDecoration(
-              hintText: 'Enter a Room ID',
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onPressed: () {
-            final newRoomId = textController.text.trim();
-            if (newRoomId.isNotEmpty) {
-              textController.clear();
-            }
-          },
-          child: const Text("Join"),
-        ),
-      ],
     );
   }
 }

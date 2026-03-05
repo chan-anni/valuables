@@ -649,15 +649,16 @@ class _MapPageState extends State<MapPage> {
       // We use .single() because we only expect one owner per item
       final itemData = await supabase
           .from("items")
-          .select("user_id")
+          .select("user_id, title")
           .eq('id', itemId)
           .single();
 
       final String ownerId = itemData['user_id'];
+      final String itemTitle = itemData['title'];
 
       // 3. Create the Room and get the new Room ID
       // Note: I updated ChatService to return the room ID earlier
-      final room = await chatService.createRoom("Claim for Item $itemId");
+      final room = await chatService.createRoom(itemTitle);
       if (room == null) return;
 
       final String roomId = room['id'];
