@@ -4,6 +4,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'package:google_places_api_flutter/google_places_api_flutter.dart' as places;
+import 'package:valuables/app_config.dart';
 
 class MapPickerResult {
   final double lat;
@@ -236,7 +237,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             left: 12,
             right: 12,
             child: places.PlaceSearchField(
-              apiKey: "API_KEY_HERE",
+              apiKey: AppConfig.placesApiKey,
               isLatLongRequired: true,
               debounceDuration: const Duration(milliseconds: 400),
               hideOnEmpty: true,
