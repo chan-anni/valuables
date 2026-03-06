@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:valuables/screens/chat_screen.dart';
 
 class ChatPage extends StatefulWidget {
@@ -16,101 +17,96 @@ class _ChatPageState extends State<ChatPage> {
   final _authService = GetIt.I<AuthService>();
   final _supabase = Supabase.instance.client;
 
-  List<types.Room> _chatRooms = [];
-  Map<String, String> _lastMessages = {};
-  bool _isLoading = true;
+  final _roomsController =
+      StreamController<List<Map<String, dynamic>>>.broadcast();
+  StreamSubscription<List<Map<String, dynamic>>>? _realtimeSub;
+
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    _fetchChatRooms();
+    _userId = _authService.getCurrentUserSession()?.user.id;
+
+    if (_userId == null) return;
+
+    _realtimeSub = _supabase
+        .from('chat_room_member')
+        .stream(primaryKey: ['id'])
+        .eq('member_id', _userId!)
+        .asyncMap((members) => _fetchRoomDetails(members))
+        .listen(
+          (rooms) => _roomsController.add(rooms),
+          onError: (e) => _roomsController.addError(e),
+        );
   }
 
-  Future<void> _fetchChatRooms() async {
-    final user = _authService.getCurrentUserSession()?.user;
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    _roomsController.close();
+    super.dispose();
+  }
 
-    if (user == null) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
-    }
+  Future<List<Map<String, dynamic>>> _fetchRoomDetails(
+    List<Map<String, dynamic>> members,
+  ) async {
+    if (members.isEmpty) return [];
 
-    try {
-      final response = await _supabase
-          .from("chat_room_member")
-          .select('''
-              chat_room_id,
-              chat_room (
-                name,
-                message(
-                  text,
-                  created_at
-                ),
-                items (
-                  image_url
-                )
-              )
-            ''')
-          .eq("member_id", user.id)
-          .order('created_at', ascending: true);
+    final roomIds = members.map((m) => m['chat_room_id'] as String).toList();
 
-      final List<dynamic> records = response as List<dynamic>;
+    final response = await _supabase
+        .from('chat_room')
+        .select('''
+          id,
+          name,
+          items (image_url),
+          message (text, created_at)
+        ''')
+        .inFilter('id', roomIds)
+        .order('created_at', referencedTable: 'message', ascending: false);
 
-      final List<types.Room> parsedRooms = records.map((record) {
-        final roomData = record['chat_room'] as Map<String, dynamic>?;
-        final itemData = roomData?['items'] as Map<String, dynamic>?;
-        final roomName = roomData?['name'] ?? 'Item Discussion';
-        final roomImg = itemData?['image_url'] as String?;
-        final chatRoomId = record['chat_room_id'] as String;
+    return List<Map<String, dynamic>>.from(response);
+  }
 
-        final messageList = roomData?['message'] as List<dynamic>? ?? [];
-        if (messageList.isNotEmpty) {
-          final lastMsg = messageList.last as Map<String, dynamic>;
-          _lastMessages[chatRoomId] = lastMsg['text'] as String? ?? '';
-        }
+  Future<void> _refreshRooms() async {
+    if (_userId == null) return;
 
-        return types.Room(
-          id: chatRoomId,
-          type: types.RoomType.direct,
-          imageUrl: roomImg,
-          users: [],
-          name: roomName,
-        );
-      }).toList();
+    final members = await _supabase
+        .from('chat_room_member')
+        .select()
+        .eq('member_id', _userId!);
 
-      if (mounted) {
-        setState(() {
-          _chatRooms = parsedRooms;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error fetching chat rooms: $e");
-      if (mounted) setState(() => _isLoading = false);
-    }
+    final rooms = await _fetchRoomDetails(
+      List<Map<String, dynamic>>.from(members),
+    );
+    _roomsController.add(rooms);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Messages"), elevation: 0),
-      body: Column(
-        children: [
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _chatRooms.isEmpty
-                ? _buildEmptyState()
-                : ListView.separated(
-                    itemCount: _chatRooms.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final room = _chatRooms[index];
-                      return _buildRoomTile(room);
-                    },
-                  ),
-          ),
-        ],
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _roomsController.stream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final rooms = snapshot.data!;
+
+          if (rooms.isEmpty) return _buildEmptyState();
+
+          return ListView.builder(
+            itemCount: rooms.length,
+            itemBuilder: (context, index) => _buildRoomTile(rooms[index]),
+          );
+        },
       ),
     );
   }
@@ -131,31 +127,38 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildRoomTile(types.Room room) {
-    final lastMessage =
-        _lastMessages[room.id] ?? "Tap to start the conversation";
+  Widget _buildRoomTile(Map<String, dynamic> room) {
+    final roomId = room['id'] as String;
+    final roomName = room['name'] as String? ?? 'Item Discussion';
+    final itemData = room['items'] as Map<String, dynamic>?;
+    final roomImg = itemData?['image_url'] as String?;
+
+    final messageList = room['message'] as List<dynamic>? ?? [];
+    final lastMessage = messageList.isNotEmpty
+        ? (messageList.first as Map<String, dynamic>)['text'] as String? ?? ''
+        : 'Tap to start the conversation';
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       leading: CircleAvatar(
         backgroundImage: NetworkImage(
-          room.imageUrl ??
+          roomImg ??
               "https://zhurzsbvxcsaexcbqown.supabase.co/storage/v1/object/public/items/items/1771975266212.jpg",
         ),
+        radius: 24,
       ),
       title: Text(
-        room.name ?? 'Chat ${room.id.substring(0, 4)}...',
+        roomName,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: Text(lastMessage, style: TextStyle(color: Colors.grey)),
+      subtitle: Text(lastMessage, style: const TextStyle(color: Colors.grey)),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(chatRoom: room.id),
-          ),
+          MaterialPageRoute(builder: (context) => ChatScreen(chatRoom: roomId)),
         );
+        _refreshRooms();
       },
     );
   }
