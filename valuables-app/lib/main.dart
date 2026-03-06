@@ -20,12 +20,12 @@ Future<void> main() async {
 
   // Load .env and initialize Supabase in the background (non-blocking).
   unawaited(_initializeAsync());
-  setupLocator();
+  _setupLocator();
 
   runApp(MyApp());
 }
 
-void setupLocator() {
+void _setupLocator() {
   final getIt = GetIt.instance;
 
   // Register AuthService FIRST if ChatService depends on it
@@ -173,7 +173,6 @@ class _NavigationState extends State<Navigation> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Valuables')),
       body: pages[currentPageIndex],
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
@@ -449,16 +448,5 @@ class _NavigationState extends State<Navigation> {
         );
       },
     );
-  }
-}
-
-
-
-class MessagePage extends StatelessWidget {
-  const MessagePage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('Messages'));
   }
 }

@@ -6,7 +6,6 @@ import 'package:valuables/screens/lost_item_form.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:valuables/theme_controller.dart';
 
-
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
 
@@ -16,7 +15,8 @@ class MapPage extends StatefulWidget {
 
 // Map page -- needs API key
 class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
+  final Completer<GoogleMapController> _controller =
+      Completer<GoogleMapController>();
   bool _isLoadingLocation = false;
   Future<void>? _addMarkersFuture;
 
@@ -43,8 +43,8 @@ class _MapPageState extends State<MapPage> {
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746
-    );
+    zoom: 14.4746,
+  );
 
   final Set<Marker> _markers = <Marker>{};
 
@@ -55,87 +55,123 @@ class _MapPageState extends State<MapPage> {
       final data = await Supabase.instance.client.from('items').select();
 
       for (var item in data) {
-        if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
+        if (item['id'] == null ||
+            item['location_lat'] == null ||
+            item['location_lng'] == null ||
             item['title'] == null) {
           continue;
         }
 
         final rawDescription = item['description'];
-        final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
+        final description =
+            (rawDescription == null || rawDescription.toString().trim().isEmpty)
             ? 'No description added'
             : rawDescription.toString();
-            
+
         Marker newMarker = Marker(
           markerId: MarkerId(item['id'].toString()),
           position: LatLng(item['location_lat'], item['location_lng']),
           onTap: () {
-            showModalBottomSheet(context: context, 
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            builder: (BuildContext context){
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            showModalBottomSheet(
+              isScrollControlled: true,
+              context: context,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              builder: (context) => DraggableScrollableSheet(
+                minChildSize: 0.25,
+                initialChildSize: 0.4,
+                maxChildSize: 0.8,
+                snap: true,
+                snapSizes: const [0.25, 0.4, 0.8],
+                expand: false,
+                builder: (context, scrollController) => SingleChildScrollView(
+                  controller: scrollController,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Column(
                       children: [
-                        Text(item['title'],
-                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                        textAlign: TextAlign.left,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        Center(
+                          child: IconButton(
+                            icon: const Icon(Icons.drag_handle),
+                            tooltip: 'Close',
+                            onPressed: () => Navigator.pop(context),
+                          ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          tooltip: 'Close',
-                          onPressed: () => Navigator.pop(context),
+                        Text(
+                          item['title'],
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.left,
+                        ),
+                        (item['image_url'] != null &&
+                                (item['image_url'] as String).isNotEmpty)
+                            ? AspectRatio(
+                                aspectRatio: 1,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.network(
+                                    item['image_url'],
+                                    height: 200,
+                                    width: 200,
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
+                                          if (loadingProgress != null) {
+                                            return SizedBox(
+                                              height: 200,
+                                              width: 200,
+                                              child:
+                                                  CircularProgressIndicator(),
+                                            );
+                                          } else {
+                                            return child;
+                                          }
+                                        },
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              )
+                            : Container(
+                                height: 200,
+                                width: 200,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.image_not_supported),
+                              ),
+                        Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Text(
+                            description,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LostItemForm(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Submit Claim'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
-                    ? Image.network(
-                    item['image_url'], 
-                    height: 200, width: 200, 
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress != null) {
-                        return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
-                      } else {
-                        return child;
-                      }
-                    },
-                    )
-                    : Container(
-                              height: 200,
-                              width: 200,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.image_not_supported),
-                            ),
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(description,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LostItemForm()),
-                      );
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Submit Claim'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              );
-              }
+                ),
+              ),
             );
           },
         );
@@ -157,7 +193,9 @@ class _MapPageState extends State<MapPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location services are disabled. Please enable them.'),
+              content: Text(
+                'Location services are disabled. Please enable them.',
+              ),
             ),
           );
         }
@@ -185,12 +223,10 @@ class _MapPageState extends State<MapPage> {
       // Get current positiion
       final position = await Geolocator.getCurrentPosition();
       final latLng = LatLng(position.latitude, position.longitude);
-      
+
       final mapController = await _controller.future;
       mapController.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
-
     } catch (e) {
-
       // error catching for any issues during location fetching, such as timeouts or service errors
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -201,6 +237,7 @@ class _MapPageState extends State<MapPage> {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -217,7 +254,7 @@ class _MapPageState extends State<MapPage> {
             ); // Display error if marker loading fails
           } else {
             return Stack(
-              children: [ 
+              children: [
                 GoogleMap(
                   initialCameraPosition: startPos,
                   markers: _markers,
@@ -239,10 +276,13 @@ class _MapPageState extends State<MapPage> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        :  Icon(Icons.my_location, color: Theme.of(context).colorScheme.primary),
+                        : Icon(
+                            Icons.my_location,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                   ),
                 ),
-              ]
+              ],
             );
           }
         },
