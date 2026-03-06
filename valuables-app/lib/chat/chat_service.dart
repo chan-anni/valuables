@@ -29,6 +29,20 @@ class ChatService {
     }
   }
 
+  Future<void> deleteRoom({required String roomId}) async {
+    try {
+      // Delete members explicitly so Supabase Realtime picks up the change.
+      // Cascade-triggered deletes don't fire Realtime events.
+      await _supabaseClient
+          .from('chat_room_member')
+          .delete()
+          .eq('chat_room_id', roomId);
+      await _supabaseClient.from('chat_room').delete().eq('id', roomId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> addUsersToRoom(List<String> userIds, String roomId) async {
     try {
       // 1. Transform the list of User objects into a list of Maps
