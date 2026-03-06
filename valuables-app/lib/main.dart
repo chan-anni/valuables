@@ -658,7 +658,10 @@ class _MapPageState extends State<MapPage> {
 
       // 3. Create the Room and get the new Room ID
       // Note: I updated ChatService to return the room ID earlier
-      final room = await chatService.createRoom(itemTitle);
+      final room = await chatService.createRoom(
+        name: itemTitle,
+        itemId: itemId,
+      );
       if (room == null) return;
 
       final String roomId = room['id'];

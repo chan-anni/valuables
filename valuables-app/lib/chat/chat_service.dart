@@ -6,7 +6,10 @@ class ChatService {
   final _supabaseClient = Supabase.instance.client;
   final authService = GetIt.I<AuthService>();
 
-  Future<Map<String, dynamic>?> createRoom(String name) async {
+  Future<Map<String, dynamic>?> createRoom({
+    required String name,
+    required String itemId,
+  }) async {
     try {
       if (name.isEmpty) return null;
 
@@ -15,6 +18,7 @@ class ChatService {
           .insert({
             'name': name, // Using the variable from controller
             'is_public': false,
+            'item_id': itemId,
           })
           .select('id')
           .single();
@@ -44,7 +48,7 @@ class ChatService {
     try {
       final result = await _supabaseClient
           .from("chat_room")
-          .select("id, name, chat_room_member!inner ()")
+          .select("id, name, items(image_url), chat_room_member!inner ()")
           .eq("id", roomId)
           .eq("chat_room_member.member_id", user.id)
           .single();

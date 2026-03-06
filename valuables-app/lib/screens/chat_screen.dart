@@ -22,7 +22,8 @@ class ChatScreenState extends State<ChatScreen> {
 
   Map<String, dynamic>? room;
   Map<String, dynamic>? user;
-  final _supabase = Supabase.instance.client; // Add this
+  String? _itemImageUrl;
+  final _supabase = Supabase.instance.client;
 
   bool _isLoading = true; // Add a loading flag
 
@@ -42,12 +43,15 @@ class ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    final itemData = fetchedRoom['items'] as Map<String, dynamic>?;
+
     // Load the chat history before updating the UI state
     await _loadHistoricalMessages();
 
     setState(() {
       room = fetchedRoom;
       user = fetchedUser;
+      _itemImageUrl = itemData?['image_url'] as String?;
       _isLoading = false;
     });
 
@@ -100,7 +104,39 @@ class ChatScreenState extends State<ChatScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    debugPrint(_itemImageUrl);
+
     return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundImage: _itemImageUrl != null
+                  ? NetworkImage(_itemImageUrl!)
+                  : null,
+              child: _itemImageUrl == null
+                  ? const Icon(Icons.image, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                room?['name'] ?? 'Chat',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.more_vert),
+            onPressed: () {
+              // Handle menu action
+            },
+          ),
+        ],
+      ),
       body: Chat(
         chatController: _chatController,
         currentUserId: user!['id'], // Bracket notation
