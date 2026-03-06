@@ -7,6 +7,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/theme_controller.dart';
 import 'package:valuables/pages/history_page.dart';
 
+import 'package:get_it/get_it.dart';
+import 'package:valuables/auth/auth_service.dart';
+
 final _supabase = Supabase.instance.client;
 
 class ProfilePage extends StatefulWidget {
@@ -698,6 +701,21 @@ class _LoginFormState extends State<_LoginForm> {
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      await GetIt.I<AuthService>().signInWithGoogle();
+    } catch (err) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $err")));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -748,6 +766,24 @@ class _LoginFormState extends State<_LoginForm> {
                   child: _isLoading
                       ? const CircularProgressIndicator()
                       : const Text('Sign In'),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _loginWithGoogle,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : const Text('Sign In With Google'),
                 ),
               ),
               const SizedBox(height: 16),
