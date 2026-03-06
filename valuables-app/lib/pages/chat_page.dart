@@ -34,25 +34,25 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     try {
-      // Use Supabase foreign key join syntax to fetch the room's name
-      // Note: Replace "chat_room" with the actual name of your rooms table if it is different
       final response = await _supabase
           .from("chat_room_member")
-          .select("chat_room_id, chat_room(name)")
+          .select("chat_room_id, chat_room(name, items(image_url))")
           .eq("member_id", user.id);
 
       final List<dynamic> records = response as List<dynamic>;
 
       final List<types.Room> parsedRooms = records.map((record) {
-        // Extract the name from the joined table data
         final roomData = record['chat_room'] as Map<String, dynamic>?;
+        final itemData = roomData?['items'] as Map<String, dynamic>?;
         final roomName = roomData?['name'] ?? 'Item Discussion';
+        final roomImg = itemData?['image_url'] as String?;
 
         return types.Room(
           id: record['chat_room_id'],
           type: types.RoomType.direct,
+          imageUrl: roomImg,
           users: [],
-          name: roomName, // Pass the fetched name here
+          name: roomName,
         );
       }).toList();
 
@@ -114,10 +114,9 @@ class _ChatPageState extends State<ChatPage> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(
-        backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-        child: Icon(
-          Icons.inventory_2_outlined,
-          color: Theme.of(context).primaryColor,
+        backgroundImage: NetworkImage(
+          room.imageUrl ??
+              "https://zhurzsbvxcsaexcbqown.supabase.co/storage/v1/object/public/items/items/1771975266212.jpg",
         ),
       ),
       title: Text(
