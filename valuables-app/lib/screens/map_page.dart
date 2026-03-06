@@ -78,7 +78,7 @@ class _MapPageState extends State<MapPage> {
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               builder: (context) => DraggableScrollableSheet(
                 minChildSize: 0.25,
-                initialChildSize: 0.4,
+                initialChildSize: 0.8,
                 maxChildSize: 0.8,
                 snap: true,
                 snapSizes: const [0.25, 0.4, 0.8],
@@ -88,61 +88,83 @@ class _MapPageState extends State<MapPage> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Center(
                           child: IconButton(
+                            padding: EdgeInsets.zero, // Remove internal padding
+                            constraints:
+                                const BoxConstraints(), // Remove the 48x48 restriction
+                            visualDensity:
+                                VisualDensity.compact, // Tighten up the layout
                             icon: const Icon(Icons.drag_handle),
                             tooltip: 'Close',
                             onPressed: () => Navigator.pop(context),
                           ),
                         ),
-                        Text(
-                          item['title'],
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w500,
+                        Container(
+                          margin: EdgeInsets.only(bottom: 16),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child:
+                                  (item['image_url'] != null &&
+                                      (item['image_url'] as String).isNotEmpty)
+                                  ? Image.network(
+                                      item['image_url'],
+                                      height: 200,
+                                      width: 200,
+                                      loadingBuilder:
+                                          (context, child, loadingProgress) {
+                                            if (loadingProgress != null) {
+                                              return SizedBox(
+                                                height: 200,
+                                                width: 200,
+                                                child:
+                                                    CircularProgressIndicator(),
+                                              );
+                                            } else {
+                                              return child;
+                                            }
+                                          },
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Container(
+                                      decoration: BoxDecoration(
+                                        color: const Color.fromARGB(
+                                          255,
+                                          190,
+                                          190,
+                                          190,
+                                        ), // The background color
+                                        borderRadius: BorderRadius.circular(
+                                          16,
+                                        ), // Makes the background a circle
+                                      ),
+                                      child: Icon(Icons.image_not_supported),
+                                    ),
+                            ),
                           ),
-                          textAlign: TextAlign.left,
                         ),
-                        (item['image_url'] != null &&
-                                (item['image_url'] as String).isNotEmpty)
-                            ? AspectRatio(
-                                aspectRatio: 1,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Image.network(
-                                    item['image_url'],
-                                    height: 200,
-                                    width: 200,
-                                    loadingBuilder:
-                                        (context, child, loadingProgress) {
-                                          if (loadingProgress != null) {
-                                            return SizedBox(
-                                              height: 200,
-                                              width: 200,
-                                              child:
-                                                  CircularProgressIndicator(),
-                                            );
-                                          } else {
-                                            return child;
-                                          }
-                                        },
-                                    fit: BoxFit.cover,
-                                  ),
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item['title'],
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w500,
                                 ),
-                              )
-                            : Container(
-                                height: 200,
-                                width: 200,
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.image_not_supported),
+                                textAlign: TextAlign.left,
                               ),
-                        Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Text(
-                            description,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
+                              Text(
+                                item['description'],
+                                textAlign: TextAlign.left,
+                              ),
+                            ],
                           ),
                         ),
                         ElevatedButton.icon(
