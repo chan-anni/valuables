@@ -17,6 +17,7 @@ class _ChatPageState extends State<ChatPage> {
   final _supabase = Supabase.instance.client;
 
   List<types.Room> _chatRooms = [];
+  Map<String, String> _lastMessages = {};
   bool _isLoading = true;
 
   @override
@@ -36,8 +37,21 @@ class _ChatPageState extends State<ChatPage> {
     try {
       final response = await _supabase
           .from("chat_room_member")
-          .select("chat_room_id, chat_room(name, items(image_url))")
-          .eq("member_id", user.id);
+          .select('''
+              chat_room_id,
+              chat_room (
+                name,
+                message(
+                  text,
+                  created_at
+                ),
+                items (
+                  image_url
+                )
+              )
+            ''')
+          .eq("member_id", user.id)
+          .order('created_at', ascending: true);
 
       final List<dynamic> records = response as List<dynamic>;
 
@@ -46,9 +60,16 @@ class _ChatPageState extends State<ChatPage> {
         final itemData = roomData?['items'] as Map<String, dynamic>?;
         final roomName = roomData?['name'] ?? 'Item Discussion';
         final roomImg = itemData?['image_url'] as String?;
+        final chatRoomId = record['chat_room_id'] as String;
+
+        final messageList = roomData?['message'] as List<dynamic>? ?? [];
+        if (messageList.isNotEmpty) {
+          final lastMsg = messageList.last as Map<String, dynamic>;
+          _lastMessages[chatRoomId] = lastMsg['text'] as String? ?? '';
+        }
 
         return types.Room(
-          id: record['chat_room_id'],
+          id: chatRoomId,
           type: types.RoomType.direct,
           imageUrl: roomImg,
           users: [],
@@ -111,6 +132,9 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildRoomTile(types.Room room) {
+    final lastMessage =
+        _lastMessages[room.id] ?? "Tap to start the conversation";
+
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: CircleAvatar(
@@ -123,10 +147,7 @@ class _ChatPageState extends State<ChatPage> {
         room.name ?? 'Chat ${room.id.substring(0, 4)}...',
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: const Text(
-        "Tap to view messages",
-        style: TextStyle(color: Colors.grey),
-      ),
+      subtitle: Text(lastMessage, style: TextStyle(color: Colors.grey)),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: () {
         Navigator.push(
