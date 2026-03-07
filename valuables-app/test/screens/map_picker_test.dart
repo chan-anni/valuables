@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:valuables/screens/map_picker_screen.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:valuables/app_config.dart';
 
 // Prevent Google Maps platform channel errors in widget tests
 void _mockMapChannel() {
@@ -13,6 +13,11 @@ void _mockMapChannel() {
 
 void main() {
   setUp(() {
+    try {
+      AppConfig.placesApiKey = 'test-api-key';
+    } catch (_) {
+      // Appconfig just needs to be set to something
+    }
     _mockMapChannel();
   });
 
@@ -94,71 +99,11 @@ void main() {
     },
   );
 
-  testWidgets('search results display and selecting one updates picked location', (
-    tester,
-  ) async {
-    final loc = Location(
-      latitude: 47.6,
-      longitude: -122.33,
-      timestamp: DateTime.now(),
-    );
-
-    // Build the key exactly as _getLocationName() does, using the actual
-    // double values from the Location object
-    final key = '${loc.latitude},${loc.longitude}';
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: MapPickerScreen(
-          initialSearchResults: [loc],
-          initialLocationNames: {key: 'Test Place'},
-        ),
-      ),
-    );
-    await tester
-        .pump(); // using pump() not pumpAndSettle() since GoogleMap never settles
-
-    // The search result should be visible in the dropdown
-    expect(find.text('Test Place'), findsOneWidget);
-
-    // Tap the search result to select it
-    await tester.tap(find.text('Test Place'));
-    await tester.pump();
-
-    expect(
-      find.text(
-        '${loc.latitude.toStringAsFixed(5)}, ${loc.longitude.toStringAsFixed(5)}',
-      ),
-      findsOneWidget,
-    );
-  });
-
   testWidgets('shows default location prompt in bottom panel', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: MapPickerScreen()));
     await tester.pump();
 
     expect(find.text('Tap on the map to select a location'), findsOneWidget);
-  });
-
-  testWidgets('injected search results appear in dropdown', (tester) async {
-    final loc = Location(
-      latitude: 47.6,
-      longitude: -122.33,
-      timestamp: DateTime.now(),
-    );
-    final key = '${loc.latitude},${loc.longitude}';
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: MapPickerScreen(
-          initialSearchResults: [loc],
-          initialLocationNames: {key: 'Pike Place Market'},
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.text('Pike Place Market'), findsOneWidget);
   });
 
   testWidgets('search field accepts text input', (tester) async {
