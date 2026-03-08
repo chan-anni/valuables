@@ -20,11 +20,11 @@ class _MapPageState extends State<MapPage> {
   Future<void>? _addMarkersFuture;
 
   List<Map<String, dynamic>> _allItems = [];
-  String? _selectedCategory;
+  String _selectedCategory = 'All';
   String _selectedTimeRange = 'all';
 
   static const List<String> _categories = [
-    'Phones', 'Laptops', 'Clothing', 'Accessories',
+    'All', 'Phones', 'Laptops', 'Clothing', 'Accessories',
     'Keys', 'Bags', 'Wallets', 'Misc. Electronics', 'Other',
   ];
 
@@ -82,7 +82,7 @@ class _MapPageState extends State<MapPage> {
           item['location_lng'] == null ||
           item['title'] == null) { return false; }
 
-      if (_selectedCategory != null && item['category'] != _selectedCategory) return false;
+      if (_selectedCategory != 'All' && item['category'] != _selectedCategory) return false;
 
       if (_selectedTimeRange != 'all') {
         final createdAt = DateTime.tryParse(item['created_at'] ?? '');
@@ -248,9 +248,9 @@ class _MapPageState extends State<MapPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final chipBg = isDark ? const Color(0xFF2A2A2A) : Colors.white;
 
-    final categoryLabel = _selectedCategory ?? 'Category';
+    final categoryLabel = _selectedCategory;
     final timeLabel = _timeLabels[_selectedTimeRange]!;
-    final categoryActive = _selectedCategory != null;
+    final categoryActive = _selectedCategory != 'All';
     final timeActive = _selectedTimeRange != 'all';
 
     return Positioned(
@@ -264,14 +264,13 @@ class _MapPageState extends State<MapPage> {
             active: categoryActive,
             chipBg: chipBg,
             selectedBg: primary,
-            child: PopupMenuButton<String?>(
+            child: PopupMenuButton<String>(
               initialValue: _selectedCategory,
               onSelected: (value) {
                 setState(() => _selectedCategory = value);
                 _applyFilters();
               },
               itemBuilder: (_) => [
-                const PopupMenuItem(value: null, child: Text('All')),
                 ..._categories.map((cat) => PopupMenuItem(value: cat, child: Text(cat))),
               ],
               child: const SizedBox.shrink(),
