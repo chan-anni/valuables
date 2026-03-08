@@ -14,6 +14,7 @@ import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 import 'screens/map_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
+import 'app_config.dart';
 // Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
@@ -42,6 +43,7 @@ Future<void> _initializeAsync() async {
   try {
     debugPrint('_initializeAsync: loading .env');
     await dotenv.load(fileName: '.env');
+    AppConfig.placesApiKey = dotenv.env['GOOGLE_MAP_KEY']!;
     debugPrint('_initializeAsync: .env loaded');
   } catch (e) {
     debugPrint('_initializeAsync: dotenv.load failed: $e');
