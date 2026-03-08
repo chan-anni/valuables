@@ -160,24 +160,40 @@ class _NavigationState extends State<Navigation> {
   @override
   void initState() {
     super.initState();
+    supabaseInitializedNotifier.addListener(_onSupabaseReady); // Check if Supabase is ready before setting up auth listener
+    _setupAuthListener();
+  }
+  void _onSupabaseReady() {
+    if (supabaseInitializedNotifier.value) {
+      _setupAuthListener();
+      supabaseInitializedNotifier.removeListener(_onSupabaseReady);
+    }
+  }
 
+  void _setupAuthListener() {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      final event = data.event;
-      if (event == AuthChangeEvent.signedIn ||
-          event == AuthChangeEvent.initialSession) {
-        MatchService.listenForMatches();
-      } else if (event == AuthChangeEvent.signedOut) {
+      // Covers both sign in and app start with existing session
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.initialSession) {
+        if (data.session != null) {  // Extra check to ensure session is valid
+          MatchService.listenForMatches();
+        }
+      } else if (data.event == AuthChangeEvent.signedOut) {  // Match service doesn't work without a user session, so dispose on sign out
         MatchService.dispose();
       }
     });
 
+    // Handle case where Supabase was already initialized before listener was set up.
+    // This allows us to start listening for matches immediatly if the session is still valid from prev app run
     if (Supabase.instance.client.auth.currentUser != null) {
+      debugPrint('User already logged in, starting listener immediately');
       MatchService.listenForMatches();
     }
   }
 
   @override
   void dispose() {
+    supabaseInitializedNotifier.removeListener(_onSupabaseReady);
     MatchService.dispose();
     super.dispose();
   }
@@ -188,7 +204,7 @@ class _NavigationState extends State<Navigation> {
     });
   }
 
-  // pages left->right: Map, Listings, (center FAB), Messages, Account
+  // pages left->right: Map, Listings, (center FAB -- allows us to make form), Messages, Account
   late final List<Widget> pages = [
     const MapPage(),
     const HomePage(),
