@@ -162,6 +162,8 @@ class _NavigationState extends State<Navigation> {
     super.initState();
     supabaseInitializedNotifier.addListener(_onSupabaseReady); // Check if Supabase is ready before setting up auth listener
     _setupAuthListener();
+
+
   }
   void _onSupabaseReady() {
     if (supabaseInitializedNotifier.value) {
@@ -206,7 +208,7 @@ class _NavigationState extends State<Navigation> {
 
   // pages left->right: Map, Listings, (center FAB -- allows us to make form), Messages, Account
   late final List<Widget> pages = [
-    const MapPage(),
+    MapPage(),
     const HomePage(),
     const SizedBox.shrink(), // placeholder for center FAB
     const ChatPage(),

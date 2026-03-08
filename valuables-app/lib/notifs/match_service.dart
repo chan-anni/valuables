@@ -1,15 +1,12 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'local_notifs.dart';
-import 'package:flutter/src/foundation/print.dart';
 
 
 class MatchService {
   static RealtimeChannel? _channel;
 
   static void listenForMatches() {
-    debugPrintSynchronously('Listening for matches...'); 
     final userId = Supabase.instance.client.auth.currentUser?.id;
-    debugPrintSynchronously('userId: $userId'); 
     if (userId == null) return;
 
     _channel = Supabase.instance.client
@@ -24,16 +21,19 @@ class MatchService {
         value: userId,
       ),
       callback: (payload) async {
-        debugPrint('🔔 Notification received: ${payload.newRecord}'); // 👈
         final row = payload.newRecord;
         final data = row['data'] as Map<String, dynamic>? ?? {};
         final lostItemId = data['lost_item_id'] as String? ?? '';
+        final foundLat = (data['found_lat'] as num?)?.toDouble() ?? 0.0;
+        final foundLng = (data['found_lng'] as num?)?.toDouble() ?? 0.0;
 
         await showMatchNotification(
           title: row['title'] as String,
           body: row['body'] as String,
           notificationId: row['id'] as String,
           lostItemId: lostItemId,
+          foundLat: foundLat, 
+          foundLng: foundLng, 
         );
 
         await Supabase.instance.client
@@ -43,7 +43,6 @@ class MatchService {
       },
     )
     .subscribe((status, [error]) {
-      debugPrint('📡 Realtime status: $status error: $error'); // 👈
     });
   }
 

@@ -8,7 +8,14 @@ import 'package:valuables/theme_controller.dart';
 
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  final double? notifItemLat;    
+  final double? notifItemLang;     
+  final String? notifItemId; 
+  final bool fromNotification;
+
+  // For zooming into notifications location on tap , override the default map position and marker highlighting
+  const MapPage({super.key, this.notifItemLat, this.notifItemLang, this.notifItemId, this.fromNotification = false}); 
+  
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -20,18 +27,50 @@ class _MapPageState extends State<MapPage> {
   bool _isLoadingLocation = false;
   Future<void>? _addMarkersFuture;
 
-  @override
-  void initState() {
-    super.initState();
-    _addMarkersFuture = _addMarkers();
-    supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
-  }
+@override
+void initState() {
+  super.initState();
+  _addMarkersFuture = _addMarkers();
+  supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
+
+  // Zoom to notification location if opened via notif tap
+  // If the page was constructed with a notification payload we handle
+  // the animation in the delayed flow below (which waits for markers).
+
+    // If this MapPage was constructed with a notification payload (the
+    // notif handler pushed it with lat/lng/itemId), animate to that
+    // location after markers and controller are ready.
+    if (widget.notifItemLat != null && widget.notifItemLang != null) {
+      Future.delayed(const Duration(milliseconds: 500), () async {
+        final lat = widget.notifItemLat!;
+        final lng = widget.notifItemLang!;
+        if (!mounted) return;
+        if (_addMarkersFuture != null) {
+          try {
+            await _addMarkersFuture;
+          } catch (e) {
+            debugPrint('Warning: _addMarkersFuture failed: $e');
+          }
+        }
+        try {
+          final controller = await _controller.future;
+          await controller.animateCamera(
+            CameraUpdate.newLatLngZoom(LatLng(lat, lng), 16),
+          );
+        } catch (e) {
+          debugPrint('Error animating to constructor notif target: $e');
+        }
+      });
+    }
+}
 
   @override
   void dispose() {
     supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
+
     super.dispose();
   }
+
 
   void _onSupabaseInitialized() {
     if (supabaseInitializedNotifier.value) {
@@ -50,13 +89,16 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _addMarkers() async {
     if (!supabaseInitializedNotifier.value) return;
+    final newMarkers = <Marker>{};
 
     try {
       final data = await Supabase.instance.client.from('items').select();
 
       for (var item in data) {
+        if (item['type'] != 'found') continue; // Only show found items on map, don't include items
         if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
             item['title'] == null) {
+              debugPrint('DB id: ${item['id']}  notif id: ${widget.notifItemId}');
           continue;
         }
 
@@ -64,10 +106,20 @@ class _MapPageState extends State<MapPage> {
         final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
             ? 'No description added'
             : rawDescription.toString();
+        final bool isNotifItem =
+          widget.notifItemLat != null &&
+          widget.notifItemLang != null &&
+          (item['location_lat'] - widget.notifItemLat!).abs() < 0.00001 &&
+          (item['location_lng'] - widget.notifItemLang!).abs() < 0.00001;
             
-        Marker newMarker = Marker(
+        // Adding the actual marker with a different color if it's the one from the notification (only applicable if coming from a notif)
+        newMarkers.add( Marker(
           markerId: MarkerId(item['id'].toString()),
           position: LatLng(item['location_lat'], item['location_lng']),
+          icon: isNotifItem
+            ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure) // Blue for now, can change later
+            : BitmapDescriptor.defaultMarker,
+
           onTap: () {
             showModalBottomSheet(context: context, 
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -79,12 +131,17 @@ class _MapPageState extends State<MapPage> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(item['title'],
-                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                        textAlign: TextAlign.left,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        Expanded(
+                        child: Text(
+                          item['title'],
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
+                      ),
                         IconButton(
                           icon: const Icon(Icons.close),
                           tooltip: 'Close',
@@ -138,8 +195,16 @@ class _MapPageState extends State<MapPage> {
               }
             );
           },
+        )
         );
-        _markers.add(newMarker);
+    }
+    // Only update state if widget is still mounted to avoid setState on unmounted widget error
+      if (mounted) {
+        setState(() {
+          _markers
+            ..clear()
+            ..addAll(newMarkers);
+        });
       }
     } catch (e) {
       debugPrint('Error loading markers: $e');
@@ -204,6 +269,15 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.fromNotification
+          ? AppBar(
+              title: const Text('Map'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            )
+          : null,
       body: FutureBuilder(
         future: _addMarkersFuture,
         builder: (context, snapshot) {
@@ -222,7 +296,9 @@ class _MapPageState extends State<MapPage> {
                   initialCameraPosition: startPos,
                   markers: _markers,
                   onMapCreated: (GoogleMapController controller) {
+                    if (!_controller.isCompleted) {
                     _controller.complete(controller);
+                    }
                   },
                 ),
                 // Current location button

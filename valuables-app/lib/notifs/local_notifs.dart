@@ -27,6 +27,8 @@ Future<void> showMatchNotification({
   required String body,       // comes straight from notifications.body
   required String notificationId, // notifications.id — used for dedup
   required String lostItemId, // notifications.data.lost_item_id — used as nav payload
+  required double foundLat, 
+  required double foundLng,
 }) async {
   await flutterLocalNotificationsPlugin.show(
     notificationId.hashCode,
@@ -47,6 +49,6 @@ Future<void> showMatchNotification({
         priority: Priority.high,
       ),
     ),
-    payload: lostItemId,
+    payload: '$foundLat,$foundLng,$lostItemId', // Pass lat,lng,itemId as payload for navigation on tap
   );
 }
