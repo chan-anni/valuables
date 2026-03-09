@@ -5,7 +5,6 @@ import 'package:get_it/get_it.dart';
 import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:valuables/pages/chat_page.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatRoom;
