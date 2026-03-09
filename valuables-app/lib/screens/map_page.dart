@@ -35,6 +35,18 @@ class _MapPageState extends State<MapPage> {
     'month': 'This Month',
   };
 
+  static const Map<String, double> _categoryHues = {
+    'Phones': BitmapDescriptor.hueBlue,
+    'Laptops': BitmapDescriptor.hueCyan,
+    'Clothing': BitmapDescriptor.hueRose,
+    'Accessories': BitmapDescriptor.hueMagenta,
+    'Keys': BitmapDescriptor.hueYellow,
+    'Bags': BitmapDescriptor.hueOrange,
+    'Wallets': BitmapDescriptor.hueGreen,
+    'Misc. Electronics': BitmapDescriptor.hueAzure,
+    'Other': BitmapDescriptor.hueViolet,
+  };
+
   @override
   void initState() {
     super.initState();
@@ -103,88 +115,226 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  String _formatDate(DateTime date) {
+    final diff = DateTime.now().difference(date);
+    if (diff.inDays == 0) return 'Today';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
   Marker _buildMarker(Map<String, dynamic> item) {
     final rawDescription = item['description'];
     final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
         ? 'No description added'
         : rawDescription.toString();
+    final itemType = (item['type'] as String?)?.toUpperCase() ?? 'UNKNOWN';
+    final category = item['category'] as String? ?? 'Unknown';
+    final createdAt = DateTime.tryParse(item['created_at'] ?? '');
 
     return Marker(
       markerId: MarkerId(item['id'].toString()),
       position: LatLng(item['location_lat'] as double, item['location_lng'] as double),
+      icon: BitmapDescriptor.defaultMarkerWithHue(
+        _categoryHues[category] ?? BitmapDescriptor.hueRed,
+      ),
       onTap: () {
         showModalBottomSheet(
           context: context,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
           builder: (BuildContext context) {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            final primary = Theme.of(context).colorScheme.primary;
+            final secondary = Theme.of(context).colorScheme.secondary;
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final isLost = itemType == 'LOST';
+            final typeColor = isLost ? primary : secondary;
+
+            return DraggableScrollableSheet(
+              initialChildSize: 0.55,
+              minChildSize: 0.3,
+              maxChildSize: 0.85,
+              expand: false,
+              builder: (_, scrollController) => SingleChildScrollView(
+                controller: scrollController,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Drag handle
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      // Image
+                      (item['image_url'] != null && (item['image_url'] as String).isNotEmpty)
+                          ? GestureDetector(
+                              onTap: () {
+                                Navigator.push<void>(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => Scaffold(
+                                      backgroundColor: Colors.black,
+                                      extendBodyBehindAppBar: true,
+                                      appBar: AppBar(
+                                        backgroundColor: Colors.transparent,
+                                        elevation: 0,
+                                        leading: IconButton(
+                                          icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                                          onPressed: () => Navigator.pop(context),
+                                        ),
+                                      ),
+                                      body: Center(
+                                        child: InteractiveViewer(
+                                          minScale: 1.0,
+                                          maxScale: 5.0,
+                                          child: Image.network(item['image_url'],
+                                          width: double.infinity,
+                                          fit: BoxFit.contain,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  item['image_url'],
+                                  width: double.infinity,
+                                  height: 180,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) =>
+                                      progress != null
+                                          ? const SizedBox(
+                                              height: 180,
+                                              child: Center(child: CircularProgressIndicator()),
+                                            )
+                                          : child,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              width: double.infinity,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.grey[800] : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                            ),
+                      const SizedBox(height: 12),
+                      // Type + Category badges
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: typeColor.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              itemType,
+                              style: TextStyle(
+                                color: typeColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.grey[800] : Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              category,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.grey[300] : Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      // Title
                       Text(
                         item['title'],
-                        style: DefaultTextStyle.of(context).style.apply(fontSizeFactor: 1.6),
-                        textAlign: TextAlign.left,
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        tooltip: 'Close',
-                        onPressed: () => Navigator.pop(context),
+                      // Date
+                      if (createdAt != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDate(createdAt),
+                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      // Description
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Colors.grey[300] : Colors.grey[700],
+                          height: 1.5,
+                        ),
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 20),
+                      // Submit Claim button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LostItemForm()),
+                            );
+                          },
+                          icon: const Icon(Icons.add),
+                          label: const Text('Submit Claim'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            backgroundColor: primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                (item['image_url'] != null && (item['image_url'] as String).isNotEmpty)
-                    ? Image.network(
-                        item['image_url'],
-                        height: 200,
-                        width: 200,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress != null) {
-                            return const SizedBox(
-                              height: 200,
-                              width: 200,
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          return child;
-                        },
-                      )
-                    : Container(
-                        height: 200,
-                        width: 200,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported),
-                      ),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Text(
-                    description,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LostItemForm()),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Submit Claim'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
+              ),
             );
           },
         );
