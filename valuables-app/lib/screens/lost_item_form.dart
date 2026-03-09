@@ -499,9 +499,6 @@ class _LostItemFormState extends State<LostItemForm> {
       }
       
       final user = _supabase!.auth.currentUser;
-      
-      // For now, use a test user ID if no user is logged in
-      // TODO: Implement proper authentication
       final userId = user?.id;
       
       // Upload image if selected
