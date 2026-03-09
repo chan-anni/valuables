@@ -8,7 +8,14 @@ import 'package:valuables/theme_controller.dart';
 
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  final double? notifItemLat;    
+  final double? notifItemLng;     
+  final String? notifItemId; 
+  final bool fromNotification;
+
+  // For zooming into notifications location on tap , override the default map position and marker highlighting
+  const MapPage({super.key, this.notifItemLat, this.notifItemLng, this.notifItemId, this.fromNotification = false}); 
+  
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -52,6 +59,23 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _addMarkersFuture = _loadItems();
     supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
+    if (widget.notifItemLat != null && widget.notifItemLng != null) {
+      Future.delayed(const Duration(milliseconds: 500), () async {
+        if (!mounted) return;
+        try { await _addMarkersFuture; } catch (_) {}
+        try {
+          if (_controller.isCompleted) {
+            final controller = await _controller.future;
+            await controller.animateCamera(
+              CameraUpdate.newLatLngZoom(
+                LatLng(widget.notifItemLat!, widget.notifItemLng!), 16),
+            );
+          }
+        }catch (e) {
+          debugPrint('Error animating to notif: $e');
+        }
+      });
+    }
   }
 
   @override
@@ -59,6 +83,7 @@ class _MapPageState extends State<MapPage> {
     supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
     super.dispose();
   }
+
 
   void _onSupabaseInitialized() {
     if (supabaseInitializedNotifier.value) {
@@ -78,43 +103,34 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadItems() async {
     if (!supabaseInitializedNotifier.value) return;
     try {
-      final data = await Supabase.instance.client.from('items').select();
+      final data = await Supabase.instance.client.from('items').select().eq('type', 'found'); // Only load found items for the map
       _allItems = List<Map<String, dynamic>>.from(data);
-      _applyFilters();
+      if (widget.notifItemId != null) {
+        _buildNotificationMarker();
+      } else {
+        _applyFilters();
+      }
     } catch (e) {
       debugPrint('Error loading markers: $e');
     }
   }
 
-  void _applyFilters() {
-    final now = DateTime.now();
-    final filtered = _allItems.where((item) {
-      if (item['id'] == null ||
-          item['location_lat'] == null ||
-          item['location_lng'] == null ||
-          item['title'] == null) { return false; }
-
-      if (_selectedCategory != 'All' && item['category'] != _selectedCategory) return false;
-
-      if (_selectedTimeRange != 'all') {
-        final createdAt = DateTime.tryParse(item['created_at'] ?? '');
-        if (createdAt == null) { return false; }
-        final age = now.difference(createdAt);
-        if (_selectedTimeRange == 'today' && age.inHours > 24) { return false; }
-        if (_selectedTimeRange == 'week' && age.inDays > 7) { return false; }
-        if (_selectedTimeRange == 'month' && age.inDays > 30) { return false; }
-      }
-
-      return true;
-    });
-
-    setState(() {
-      _markers
-        ..clear()
-        ..addAll(filtered.map(_buildMarker));
-    });
+  void _buildNotificationMarker() {
+    final newMarkers = <Marker>{};
+    for (final item in _allItems) {
+      if (item['id']?.toString() != widget.notifItemId) continue;
+      if (item['location_lat'] == null || item['location_lng'] == null) continue;
+      if (item['title'] == null) continue;
+      newMarkers.add(_buildMarker(item, isNotifItem: true));
+    }
+    if (mounted) {
+      setState(() {
+        _markers..clear()..addAll(newMarkers);
+      });
+    }
   }
 
+  
   String _formatDate(DateTime date) {
     final diff = DateTime.now().difference(date);
     if (diff.inDays == 0) return 'Today';
@@ -125,7 +141,7 @@ class _MapPageState extends State<MapPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  Marker _buildMarker(Map<String, dynamic> item) {
+  Marker _buildMarker(Map<String, dynamic> item, {bool isNotifItem = false}) {
     final rawDescription = item['description'];
     final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
         ? 'No description added'
@@ -137,7 +153,7 @@ class _MapPageState extends State<MapPage> {
     return Marker(
       markerId: MarkerId(item['id'].toString()),
       position: LatLng(item['location_lat'] as double, item['location_lng'] as double),
-      icon: BitmapDescriptor.defaultMarkerWithHue(
+      icon: isNotifItem? BitmapDescriptor.defaultMarker : BitmapDescriptor.defaultMarkerWithHue(
         _categoryHues[category] ?? BitmapDescriptor.hueRed,
       ),
       onTap: () {
@@ -341,7 +357,35 @@ class _MapPageState extends State<MapPage> {
       },
     );
   }
+  
+void _applyFilters() {
+    final now = DateTime.now();
+    final filtered = _allItems.where((item) {
+      if (item['id'] == null ||
+          item['location_lat'] == null ||
+          item['location_lng'] == null ||
+          item['title'] == null) { return false; }
 
+      if (_selectedCategory != 'All' && item['category'] != _selectedCategory) return false;
+
+      if (_selectedTimeRange != 'all') {
+        final createdAt = DateTime.tryParse(item['created_at'] ?? '');
+        if (createdAt == null) { return false; }
+        final age = now.difference(createdAt);
+        if (_selectedTimeRange == 'today' && age.inHours > 24) { return false; }
+        if (_selectedTimeRange == 'week' && age.inDays > 7) { return false; }
+        if (_selectedTimeRange == 'month' && age.inDays > 30) { return false; }
+      }
+
+      return true;
+    });
+
+    setState(() {
+      _markers
+        ..clear()
+        ..addAll(filtered.map(_buildMarker));
+    });
+  }
   Future<void> _goToCurrentLocation() async {
     if (!mounted) return;
     setState(() => _isLoadingLocation = true);
@@ -496,6 +540,15 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: widget.fromNotification
+          ? AppBar(
+              title: const Text('Map'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).maybePop(),
+              ),
+            )
+          : null,
       body: FutureBuilder(
         future: _addMarkersFuture,
         builder: (context, snapshot) {
@@ -510,10 +563,12 @@ class _MapPageState extends State<MapPage> {
                   initialCameraPosition: startPos,
                   markers: _markers,
                   onMapCreated: (GoogleMapController controller) {
+                    if (!_controller.isCompleted) {
                     _controller.complete(controller);
+                    }
                   },
                 ),
-                _buildFilterBar(),
+                if (!widget.fromNotification) _buildFilterBar(),
                 // Current location button
                 Positioned(
                   right: 12,

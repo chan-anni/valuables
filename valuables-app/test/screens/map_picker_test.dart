@@ -16,7 +16,7 @@ void main() {
     try {
       AppConfig.placesApiKey = 'test-api-key';
     } catch (_) {
-      // Appconfig just needs to be set to something
+      // AppConfig just needs to be set to something
     }
     _mockMapChannel();
   });

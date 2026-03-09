@@ -15,11 +15,15 @@ import 'package:valuables/theme_controller.dart';
 import 'screens/map_page.dart';
 import "package:google_sign_in/google_sign_in.dart";
 import 'app_config.dart';
+import 'package:valuables/notifs/local_notifs.dart';
+import 'package:valuables/notifs/match_service.dart';
+import 'package:valuables/notifs/notif_handler.dart';
+
 // Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await setupNotifications();
   // Load .env and initialize Supabase in the background (non-blocking).
   unawaited(_initializeAsync());
   setupLocator();
@@ -131,6 +135,7 @@ class MyApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: mode,
@@ -154,6 +159,48 @@ class Navigation extends StatefulWidget {
 
 class _NavigationState extends State<Navigation> {
   int currentPageIndex = 0;
+  @override
+  void initState() {
+    super.initState();
+    supabaseInitializedNotifier.addListener(_onSupabaseReady); // Check if Supabase is ready before setting up auth listener
+    _onSupabaseReady(); // Calls the Auth Listener setup inside of it, so no need to double call
+
+
+  }
+  void _onSupabaseReady() {
+    if (supabaseInitializedNotifier.value) {
+      _setupAuthListener();
+      supabaseInitializedNotifier.removeListener(_onSupabaseReady);
+    }
+  }
+
+  void _setupAuthListener() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      // Covers both sign in and app start with existing session
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.initialSession) {
+        if (data.session != null) {  // Extra check to ensure session is valid
+          MatchService.listenForMatches();
+        }
+      } else if (data.event == AuthChangeEvent.signedOut) {  // Match service doesn't work without a user session, so dispose on sign out
+        MatchService.dispose();
+      }
+    });
+
+    // Handle case where Supabase was already initialized before listener was set up.
+    // This allows us to start listening for matches immediatly if the session is still valid from prev app run
+    if (Supabase.instance.client.auth.currentUser != null) {
+      debugPrint('User already logged in, starting listener immediately');
+      MatchService.listenForMatches();
+    }
+  }
+
+  @override
+  void dispose() {
+    supabaseInitializedNotifier.removeListener(_onSupabaseReady);
+    MatchService.dispose();
+    super.dispose();
+  }
 
   void setPageIndex(int index) {
     setState(() {
@@ -161,9 +208,9 @@ class _NavigationState extends State<Navigation> {
     });
   }
 
-  // pages left->right: Map, Listings, (center FAB), Messages, Account
+  // pages left->right: Map, Listings, (center FAB -- allows us to make form), Messages, Account
   late final List<Widget> pages = [
-    const MapPage(),
+    MapPage(),
     const HomePage(),
     const SizedBox.shrink(), // placeholder for center FAB
     const ChatPage(),
