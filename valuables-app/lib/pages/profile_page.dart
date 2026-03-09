@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/theme_controller.dart';
 import 'package:valuables/pages/history_page.dart';
+import 'package:valuables/screens/home_page.dart';
 
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
@@ -169,6 +170,40 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
       }
     } catch (e) {
       // Handle error
+    }
+  }
+
+  Future<void> _onClaimItem(dynamic item) async {
+    final itemId = item['id'].toString();
+    final rawType = item['type'] ?? item['item_type'];
+    final isLost = rawType?.toString().toLowerCase() == 'lost';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isLost ? 'Remove Listing' : 'Claim Item'),
+        content: Text(isLost 
+            ? 'Are you sure you want to remove this listing? This implies you have found the item.' 
+            : 'Are you sure you want to mark this item as claimed? This implies the owner has received the item.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(isLost ? 'Remove' : 'Claimed')),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _supabase.from('items').update({'status': 'claimed'}).eq('id', itemId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item marked as claimed')));
+          _loadUserData(); // Refresh list
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error claiming item: $e')));
+        }
+      }
     }
   }
 
@@ -461,7 +496,10 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                   itemCount: _userItems.length,
                   itemBuilder: (context, index) {
                     final item = _userItems[index];
-                    return _ItemCard(item: item);
+                    return ItemCard(
+                      item: item,
+                      onClaim: () => _onClaimItem(item),
+                    );
                   },
                 ),
             ],
@@ -572,84 +610,6 @@ class _NotificationCard extends StatelessWidget {
                 tooltip: 'Dismiss',
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ItemCard extends StatelessWidget {
-  final dynamic item;
-
-  const _ItemCard({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final itemType = item['item_type']?.toUpperCase() ?? 'UNKNOWN';
-    final isLost = itemType == 'LOST';
-    final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-    final secondaryColor = Theme.of(context).colorScheme.secondary;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      padding: const EdgeInsets.all(12.0),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF252525) : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: hasImage
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.network(
-                      item['image_url'] as String,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Icon(
-                          isLost ? Icons.help_outline : Icons.location_on,
-                          color: isLost ? primaryColor : secondaryColor,
-                        );
-                      },
-                    ),
-                  )
-                : Icon(
-                    isLost ? Icons.help_outline : Icons.location_on,
-                    color: isLost ? primaryColor : secondaryColor,
-                  ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item['title'] ?? 'Untitled',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${item['category'] ?? 'Uncategorized'} • ${item['item_type'] ?? 'Unknown'}',
-                  style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
-                ),
-              ],
-            ),
           ),
         ],
       ),

@@ -146,7 +146,9 @@ class _HomePageState extends State<HomePage> {
                   itemCount: _recentItems.length,
                   itemBuilder: (context, index) {
                     final item = _recentItems[index];
-                    return ItemCard(item: item);
+                    return ItemCard(
+                      item: item,
+                    );
                   },
                 ),
             ],
@@ -160,17 +162,23 @@ class _HomePageState extends State<HomePage> {
 
 class ItemCard extends StatelessWidget {
   final dynamic item;
+  final VoidCallback? onClaim;
 
-  const ItemCard({super.key, required this.item});
+  const ItemCard({super.key, required this.item, this.onClaim});
 
   @override
   Widget build(BuildContext context) {
-    final itemType = item['item_type']?.toUpperCase() ?? 'UNKNOWN';
+    final rawType = item['type'] ?? item['item_type'];
+    final itemType = rawType?.toString().toUpperCase() ?? 'UNKNOWN';
     final isLost = itemType == 'LOST';
+    final isFound = itemType == 'FOUND';
     final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
     final primaryColor = Theme.of(context).colorScheme.primary;
     final secondaryColor = Theme.of(context).colorScheme.secondary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final typeColor = isLost ? primaryColor : (isFound ? secondaryColor : Colors.grey);
+    final typeBgColor = typeColor.withValues(alpha: 0.1);
     
     // Calculate expiration (dummy logic: 30 days from creation)
     String expirationText = 'Expires soon';
@@ -211,6 +219,14 @@ class ItemCard extends StatelessWidget {
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              if (onClaim != null)
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onClaim!();
+                  },
+                  child: Text(isLost ? 'Remove' : 'Claimed'),
+                ),
             ],
           ),
         );
@@ -230,7 +246,7 @@ class ItemCard extends StatelessWidget {
               width: 60,
               height: 60,
               decoration: BoxDecoration(
-              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
+                color: typeBgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: hasImage
@@ -241,15 +257,15 @@ class ItemCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Icon(
-                            isLost ? Icons.help_outline : Icons.location_on,
-                            color: isLost ? primaryColor : secondaryColor,
+                            isLost ? Icons.help_outline : (isFound ? Icons.location_on : Icons.help),
+                            color: typeColor,
                           );
                         },
                       ),
                     )
                   : Icon(
-                      isLost ? Icons.help_outline : Icons.location_on,
-                      color: isLost ? primaryColor : secondaryColor,
+                      isLost ? Icons.help_outline : (isFound ? Icons.location_on : Icons.help),
+                      color: typeColor,
                     ),
             ),
             const SizedBox(width: 12),
@@ -268,7 +284,7 @@ class ItemCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${item['category'] ?? 'Uncategorized'} • ${item['item_type'] ?? 'Unknown'}',
+                    '${item['category'] ?? 'Uncategorized'} • $itemType',
                     style: TextStyle(fontSize: 11, color: isDark ? Colors.grey[400] : Colors.grey),
                   ),
                   const SizedBox(height: 4),
@@ -289,20 +305,39 @@ class ItemCard extends StatelessWidget {
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                isLost ? 'LOST' : 'FOUND',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: isLost ? primaryColor : secondaryColor,
+            Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: typeBgColor,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    itemType,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: typeColor,
+                    ),
+                  ),
                 ),
-              ),
+                if (onClaim != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: InkWell(
+                      onTap: onClaim,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isLost ? Colors.red : Colors.green,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(isLost ? 'REMOVE' : 'CLAIMED', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
