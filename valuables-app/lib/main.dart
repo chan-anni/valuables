@@ -13,6 +13,7 @@ import 'package:get_it/get_it.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
 import 'screens/map_page.dart';
+import "package:google_sign_in/google_sign_in.dart";
 import 'app_config.dart';
 // Theme controller is provided by theme_controller.dart
 
@@ -51,7 +52,7 @@ Future<void> _initializeAsync() async {
   try {
     final googleClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
     if (googleClientId != null) {
-      // await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
+       await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
     }
   } catch (e) {
     debugPrint('_initializeAsync: GoogleSignIn init failed: $e');
