@@ -7,10 +7,9 @@ class MatchService {
   static void listenForMatches() {
 
     final userId = Supabase.instance.client.auth.currentUser?.id;
-    final supabase = Supabase.instance.client;
     if (userId == null) return;
     if (_channel != null) {
-      supabase.removeChannel(_channel!);
+      _channel?.unsubscribe();
       _channel = null;
     }
 
@@ -49,11 +48,7 @@ class MatchService {
   }
 
   static void dispose() {
-    final supabase = Supabase.instance.client;
     _channel?.unsubscribe();
-    if (_channel != null) {
-          supabase.removeChannel(_channel!);
-          _channel = null;
-      }
+    _channel = null;
   }
 }
