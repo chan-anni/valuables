@@ -37,7 +37,7 @@ Future<void> handleNotificationTap(String? payload) async {
       MaterialPageRoute(
         builder: (_) => MapPage(
           notifItemLat: lat,
-          notifItemLang: lng,
+          notifItemLng: lng,
           notifItemId: itemId,
           fromNotification: true,
         ),

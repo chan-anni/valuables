@@ -162,7 +162,7 @@ class _NavigationState extends State<Navigation> {
   void initState() {
     super.initState();
     supabaseInitializedNotifier.addListener(_onSupabaseReady); // Check if Supabase is ready before setting up auth listener
-    _setupAuthListener();
+    _onSupabaseReady(); // Calls the Auth Listener setup inside of it, so no need to double call
 
 
   }
