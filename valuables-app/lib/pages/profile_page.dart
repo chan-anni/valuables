@@ -465,87 +465,95 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
             
             // My Listings Section
             if (!_isEditing) ...[
-              Text(
-                'My Active Listings',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
-              ),
-              const SizedBox(height: 8),
-              if (_userItems.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.format_list_bulleted_rounded, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
-                      SizedBox(height: 8),
-                      Text('No active listings', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
-                    ],
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _userItems.length,
-                  itemBuilder: (context, index) {
-                    final item = _userItems[index];
-                    return ItemCard(
-                      item: item,
-                      onClaim: () => _onClaimItem(item),
-                    );
-                  },
+              ExpansionTile(
+                title: Text(
+                  'My Active Listings (${_userItems.length})',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
                 ),
+                initiallyExpanded: false,
+                children: [
+                  if (_userItems.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.format_list_bulleted_rounded, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                          SizedBox(height: 8),
+                          Text('No active listings', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _userItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _userItems[index];
+                        return ItemCard(
+                          item: item,
+                          onClaim: () => _onClaimItem(item),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ],
-
-            const SizedBox(height: 32),
 
             // Alerts Section (Moved below listings)
             if (!_isEditing) ...[
-              Text(
-                'Potential Matches',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
-              ),
-              const SizedBox(height: 8),
-              if (_alertItems.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.notifications_none, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
-                      SizedBox(height: 8),
-                      Text('No potential matches', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
-                    ],
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _alertItems.length,
-                  itemBuilder: (context, index) {
-                    final item = _alertItems[index];
-                    return _NotificationCard(
-                      item: item, 
-                      onDismiss: () {
-                        setState(() {
-                          _alertItems.removeAt(index);
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Notification moved to history')),
-                        );
-                      }
-                    );
-                  },
+              ExpansionTile(
+                title: Text(
+                  'Potential Matches (${_alertItems.length})',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
                 ),
+                initiallyExpanded: false,
+                shape: const Border(),
+                collapsedShape: const Border(),
+                children: [
+                  if (_alertItems.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.notifications_none, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                          SizedBox(height: 8),
+                          Text('No potential matches', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _alertItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _alertItems[index];
+                        return _NotificationCard(
+                          item: item, 
+                          onDismiss: () {
+                            setState(() {
+                              _alertItems.removeAt(index);
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Notification moved to history')),
+                            );
+                          }
+                        );
+                      },
+                    ),
+                ],
+              ),
               const SizedBox(height: 24),
             ],
           ],

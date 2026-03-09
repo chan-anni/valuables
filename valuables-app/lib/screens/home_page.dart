@@ -225,7 +225,7 @@ class ItemCard extends StatelessWidget {
                     Navigator.pop(context);
                     onClaim!();
                   },
-                  child: Text(isLost ? 'Remove' : 'Claimed'),
+                  child: Text(isLost ? 'Remove' : 'Mark Claimed'),
                 ),
             ],
           ),
@@ -325,15 +325,17 @@ class ItemCard extends StatelessWidget {
                 if (onClaim != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: InkWell(
-                      onTap: onClaim,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isLost ? Colors.red : Colors.green,
-                          borderRadius: BorderRadius.circular(4),
+                    child: SizedBox(
+                      height: 30,
+                      child: ElevatedButton(
+                        onPressed: onClaim,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isLost ? Colors.red : Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                         ),
-                        child: Text(isLost ? 'REMOVE' : 'CLAIMED', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                        child: Text(isLost ? 'Remove' : 'Mark Claimed'),
                       ),
                     ),
                   ),
