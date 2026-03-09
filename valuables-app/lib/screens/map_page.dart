@@ -9,12 +9,12 @@ import 'package:valuables/theme_controller.dart';
 
 class MapPage extends StatefulWidget {
   final double? notifItemLat;    
-  final double? notifItemLang;     
+  final double? notifItemLng;     
   final String? notifItemId; 
   final bool fromNotification;
 
   // For zooming into notifications location on tap , override the default map position and marker highlighting
-  const MapPage({super.key, this.notifItemLat, this.notifItemLang, this.notifItemId, this.fromNotification = false}); 
+  const MapPage({super.key, this.notifItemLat, this.notifItemLng, this.notifItemId, this.fromNotification = false}); 
   
 
   @override
@@ -47,7 +47,7 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _addMarkersFuture = _loadItems();
     supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
-    if (widget.notifItemLat != null && widget.notifItemLang != null) {
+    if (widget.notifItemLat != null && widget.notifItemLng != null) {
       Future.delayed(const Duration(milliseconds: 500), () async {
         if (!mounted) return;
         try { await _addMarkersFuture; } catch (_) {}
@@ -55,7 +55,7 @@ class _MapPageState extends State<MapPage> {
           final controller = await _controller.future;
           await controller.animateCamera(
             CameraUpdate.newLatLngZoom(
-              LatLng(widget.notifItemLat!, widget.notifItemLang!), 16),
+              LatLng(widget.notifItemLat!, widget.notifItemLng!), 16),
           );
         } catch (e) {
           debugPrint('Error animating to notif: $e');
@@ -106,6 +106,7 @@ class _MapPageState extends State<MapPage> {
     for (final item in _allItems) {
       if (item['id']?.toString() != widget.notifItemId) continue;
       if (item['location_lat'] == null || item['location_lng'] == null) continue;
+      if (item['title'] == null) continue;
       newMarkers.add(_buildMarker(item, isNotifItem: true));
     }
     if (mounted) {
