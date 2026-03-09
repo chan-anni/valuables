@@ -90,34 +90,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _onClaimItem(String itemId) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Claim Item'),
-        content: const Text('Are you sure you want to mark this item as claimed? It will be moved to your history.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Claim')),
-        ],
-      ),
-    );
-
-    if (confirmed == true && _supabase != null) {
-      try {
-        await _supabase!.from('items').update({'status': 'claimed'}).eq('id', itemId);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item has been claimed')));
-          _loadRecentItems(); // Refresh list
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error claiming item: $e')));
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
@@ -204,8 +176,6 @@ class ItemCard extends StatelessWidget {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final secondaryColor = Theme.of(context).colorScheme.secondary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-    final isOwner = currentUserId != null && item['user_id'] == currentUserId;
     
     final typeColor = isLost ? primaryColor : (isFound ? secondaryColor : Colors.grey);
     final typeBgColor = typeColor.withValues(alpha: 0.1);
