@@ -21,53 +21,52 @@ class MapPage extends StatefulWidget {
   State<MapPage> createState() => _MapPageState();
 }
 
-// Map page -- needs API key
 class _MapPageState extends State<MapPage> {
   final Completer<GoogleMapController> _controller = Completer<GoogleMapController>();
   bool _isLoadingLocation = false;
   Future<void>? _addMarkersFuture;
 
-@override
-void initState() {
-  super.initState();
-  _addMarkersFuture = _addMarkers();
-  supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
+  List<Map<String, dynamic>> _allItems = [];
+  String _selectedCategory = 'All';
+  String _selectedTimeRange = 'all';
 
-  // Zoom to notification location if opened via notif tap
-  // If the page was constructed with a notification payload we handle
-  // the animation in the delayed flow below (which waits for markers).
+  static const List<String> _categories = [
+    'All', 'Phones', 'Laptops', 'Clothing', 'Accessories',
+    'Keys', 'Bags', 'Wallets', 'Misc. Electronics', 'Other',
+  ];
 
-    // If this MapPage was constructed with a notification payload (the
-    // notif handler pushed it with lat/lng/itemId), animate to that
-    // location after markers and controller are ready.
+  static const Map<String, String> _timeLabels = {
+    'all': 'All Time',
+    'today': 'Today',
+    'week': 'This Week',
+    'month': 'This Month',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _addMarkersFuture = _loadItems();
+    supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
     if (widget.notifItemLat != null && widget.notifItemLang != null) {
       Future.delayed(const Duration(milliseconds: 500), () async {
-        final lat = widget.notifItemLat!;
-        final lng = widget.notifItemLang!;
         if (!mounted) return;
-        if (_addMarkersFuture != null) {
-          try {
-            await _addMarkersFuture;
-          } catch (e) {
-            debugPrint('Warning: _addMarkersFuture failed: $e');
-          }
-        }
+        try { await _addMarkersFuture; } catch (_) {}
         try {
           final controller = await _controller.future;
           await controller.animateCamera(
-            CameraUpdate.newLatLngZoom(LatLng(lat, lng), 16),
+            CameraUpdate.newLatLngZoom(
+              LatLng(widget.notifItemLat!, widget.notifItemLang!), 16),
           );
         } catch (e) {
-          debugPrint('Error animating to constructor notif target: $e');
+          debugPrint('Error animating to notif: $e');
         }
       });
     }
-}
+  }
 
   @override
   void dispose() {
     supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
-
     super.dispose();
   }
 
@@ -75,52 +74,60 @@ void initState() {
   void _onSupabaseInitialized() {
     if (supabaseInitializedNotifier.value) {
       setState(() {
-        _addMarkersFuture = _addMarkers();
+        _addMarkersFuture = _loadItems();
       });
     }
   }
 
   static const CameraPosition startPos = CameraPosition(
     target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746
-    );
+    zoom: 14.4746,
+  );
 
   final Set<Marker> _markers = <Marker>{};
 
-  Future<void> _addMarkers() async {
+  Future<void> _loadItems() async {
     if (!supabaseInitializedNotifier.value) return;
-    final newMarkers = <Marker>{};
-
     try {
       final data = await Supabase.instance.client.from('items').select();
+      _allItems = List<Map<String, dynamic>>.from(data);
+      if (widget.notifItemId != null) {
+        _buildNotificationMarker();
+      } else {
+        _applyFilters();
+      }
+    } catch (e) {
+      debugPrint('Error loading markers: $e');
+    }
+  }
 
-      for (var item in data) {
-        if (item['type'] != 'found') continue; // Only show found items on map, don't include items
-        if (item['id'] == null || item['location_lat'] == null || item['location_lng'] == null || 
-            item['title'] == null) {
-              debugPrint('DB id: ${item['id']}  notif id: ${widget.notifItemId}');
-          continue;
-        }
+  void _buildNotificationMarker() {
+    final newMarkers = <Marker>{};
+    for (final item in _allItems) {
+      if (item['id']?.toString() != widget.notifItemId) continue;
+      if (item['location_lat'] == null || item['location_lng'] == null) continue;
+      newMarkers.add(_buildMarker(item, isNotifItem: true));
+    }
+    if (mounted) {
+      setState(() {
+        _markers..clear()..addAll(newMarkers);
+      });
+    }
+  }
 
-        final rawDescription = item['description'];
-        final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
-            ? 'No description added'
-            : rawDescription.toString();
-        final bool isNotifItem =
-          widget.notifItemLat != null &&
-          widget.notifItemLang != null &&
-          (item['location_lat'] - widget.notifItemLat!).abs() < 0.00001 &&
-          (item['location_lng'] - widget.notifItemLang!).abs() < 0.00001;
-            
-        // Adding the actual marker with a different color if it's the one from the notification (only applicable if coming from a notif)
-        newMarkers.add( Marker(
-          markerId: MarkerId(item['id'].toString()),
-          position: LatLng(item['location_lat'], item['location_lng']),
-          icon: isNotifItem
-            ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure) // Blue for now, can change later
-            : BitmapDescriptor.defaultMarker,
+  Marker _buildMarker(Map<String, dynamic> item, {bool isNotifItem = false}) {
+    final rawDescription = item['description'];
+    final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
+        ? 'No description added'
+        : rawDescription.toString();
 
-          onTap: () {
+    return Marker(
+      markerId: MarkerId(item['id'].toString()),
+      position: LatLng(item['location_lat'] as double, item['location_lng'] as double),
+      icon: isNotifItem
+          ? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)
+          : BitmapDescriptor.defaultMarker,
+      onTap: () {
             showModalBottomSheet(context: context, 
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             builder: (BuildContext context){
@@ -132,16 +139,14 @@ void initState() {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                        child: Text(
-                          item['title'],
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          child: Text(
+                            item['title'],
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            textAlign: TextAlign.left,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          )
                         ),
-                      ),
                         IconButton(
                           icon: const Icon(Icons.close),
                           tooltip: 'Close',
@@ -152,63 +157,85 @@ void initState() {
                   ),
                   (item['image_url'] != null && (item['image_url'] as String).isNotEmpty) 
                     ? Image.network(
-                    item['image_url'], 
-                    height: 200, width: 200, 
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress != null) {
-                        return SizedBox(height: 200, width: 200, child: CircularProgressIndicator(),);
-                      } else {
-                        return child;
-                      }
-                    },
-                    )
-                    : Container(
+                        item['image_url'],
+                        height: 200,
+                        width: 200,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress != null) {
+                            return const SizedBox(
                               height: 200,
                               width: 200,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.image_not_supported),
-                            ),
-                  Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Text(description,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+                          return child;
+                        },
+                      )
+                    : Container(
+                        height: 200,
+                        width: 200,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image_not_supported),
+                      ),
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(
+                    description,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const LostItemForm()),
-                      );
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Submit Claim'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                    ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LostItemForm()),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Submit Claim'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
                   ),
-                ],
-              );
-              }
-            );
-          },
-        )
-        );
-    }
-    // Only update state if widget is still mounted to avoid setState on unmounted widget error
-      if (mounted) {
-        setState(() {
-          _markers
-            ..clear()
-            ..addAll(newMarkers);
-        });
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+
+ void _applyFilters() {
+    final now = DateTime.now();
+    final filtered = _allItems.where((item) {
+      if (item['id'] == null ||
+          item['location_lat'] == null ||
+          item['location_lng'] == null ||
+          item['title'] == null) { return false; }
+
+      if (_selectedCategory != 'All' && item['category'] != _selectedCategory) return false;
+
+      if (_selectedTimeRange != 'all') {
+        final createdAt = DateTime.tryParse(item['created_at'] ?? '');
+        if (createdAt == null) { return false; }
+        final age = now.difference(createdAt);
+        if (_selectedTimeRange == 'today' && age.inHours > 24) { return false; }
+        if (_selectedTimeRange == 'week' && age.inDays > 7) { return false; }
+        if (_selectedTimeRange == 'month' && age.inDays > 30) { return false; }
       }
-    } catch (e) {
-      debugPrint('Error loading markers: $e');
-    }
+
+      return true;
+    });
+
+    setState(() {
+      _markers
+        ..clear()
+        ..addAll(filtered.map(_buildMarker));
+    });
   }
 
   Future<void> _goToCurrentLocation() async {
@@ -216,7 +243,6 @@ void initState() {
     setState(() => _isLoadingLocation = true);
 
     try {
-      // Make sure location services are enabled
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
@@ -228,7 +254,7 @@ void initState() {
         }
         return;
       }
-      // Check/request location permissions
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -247,16 +273,12 @@ void initState() {
         }
         return;
       }
-      // Get current positiion
+
       final position = await Geolocator.getCurrentPosition();
       final latLng = LatLng(position.latitude, position.longitude);
-      
       final mapController = await _controller.future;
       mapController.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
-
     } catch (e) {
-
-      // error catching for any issues during location fetching, such as timeouts or service errors
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not get location: ${e.toString()}')),
@@ -266,6 +288,107 @@ void initState() {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
+
+  Widget _buildFilterBar() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final chipBg = isDark ? const Color(0xFF2A2A2A) : Colors.white;
+
+    final categoryLabel = _selectedCategory;
+    final timeLabel = _timeLabels[_selectedTimeRange]!;
+    final categoryActive = _selectedCategory != 'All';
+    final timeActive = _selectedTimeRange != 'all';
+
+    return Positioned(
+      top: 8,
+      left: 12,
+      child: Row(
+        children: [
+          // Category dropdown
+          _dropdownButton(
+            label: categoryLabel,
+            active: categoryActive,
+            chipBg: chipBg,
+            selectedBg: primary,
+            child: PopupMenuButton<String>(
+              initialValue: _selectedCategory,
+              onSelected: (value) {
+                setState(() => _selectedCategory = value);
+                _applyFilters();
+              },
+              itemBuilder: (_) => [
+                ..._categories.map((cat) => PopupMenuItem(value: cat, child: Text(cat))),
+              ],
+              child: const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Time dropdown
+          _dropdownButton(
+            label: timeLabel,
+            active: timeActive,
+            chipBg: chipBg,
+            selectedBg: primary,
+            child: PopupMenuButton<String>(
+              initialValue: _selectedTimeRange,
+              onSelected: (value) {
+                setState(() => _selectedTimeRange = value);
+                _applyFilters();
+              },
+              itemBuilder: (_) => _timeLabels.entries
+                  .map((e) => PopupMenuItem(value: e.key, child: Text(e.value)))
+                  .toList(),
+              child: const SizedBox.shrink(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dropdownButton({
+    required String label,
+    required bool active,
+    required Color chipBg,
+    required Color selectedBg,
+    required Widget child,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: active ? selectedBg : chipBg,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [BoxShadow(blurRadius: 4, color: Colors.black26)],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: active ? Colors.white : null,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 18,
+                  color: active ? Colors.white : null,
+                ),
+              ],
+            ),
+          ),
+          Positioned.fill(child: child),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -282,16 +405,12 @@ void initState() {
         future: _addMarkersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            ); // Show loading spinner while markers load
+            return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            ); // Display error if marker loading fails
+            return Center(child: Text('Error: ${snapshot.error}'));
           } else {
             return Stack(
-              children: [ 
+              children: [
                 GoogleMap(
                   initialCameraPosition: startPos,
                   markers: _markers,
@@ -301,6 +420,7 @@ void initState() {
                     }
                   },
                 ),
+                if (!widget.fromNotification) _buildFilterBar(),
                 // Current location button
                 Positioned(
                   right: 12,
@@ -315,10 +435,11 @@ void initState() {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        :  Icon(Icons.my_location, color: Theme.of(context).colorScheme.primary),
+                        : Icon(Icons.my_location,
+                            color: Theme.of(context).colorScheme.primary),
                   ),
                 ),
-              ]
+              ],
             );
           }
         },

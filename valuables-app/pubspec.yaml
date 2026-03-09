@@ -49,6 +49,7 @@ dependencies:
   get_it: ^9.2.1
   flutter_chat_core: ^2.9.0
   flutter_chat_types: ^3.6.2
+  google_places_api_flutter: ^2.0.0
   flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
