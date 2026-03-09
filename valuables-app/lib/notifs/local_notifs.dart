@@ -37,8 +37,9 @@ Future<void> showMatchNotification({
   required double foundLat, 
   required double foundLng,
 }) async {
+  int notifIntId = int.parse(notificationId.replaceAll('-', '').substring(0, 8), radix: 16);
   await flutterLocalNotificationsPlugin.show(
-    notificationId.hashCode,
+    notifIntId, // Unique integer ID for the notification (derived from the UUID)
     title,
     body,
     // iOS and Android notification to ask about notification details like sound, badge, priority, etc.
