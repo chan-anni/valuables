@@ -20,13 +20,20 @@ Future<void> setupNotifications() async {
       handleNotificationTap(response.payload);
     },
   );
+  final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
+      flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+  if (androidPlugin != null) {
+    await androidPlugin.requestNotificationsPermission();
+  }
 }
+
 
 Future<void> showMatchNotification({
   required String title,      // comes straight from notifications.title
   required String body,       // comes straight from notifications.body
   required String notificationId, // notifications.id — used for dedup
-  required String lostItemId, // notifications.data.lost_item_id — used as nav payload
+  required String foundItemId, 
   required double foundLat, 
   required double foundLng,
 }) async {
@@ -49,6 +56,6 @@ Future<void> showMatchNotification({
         priority: Priority.high,
       ),
     ),
-    payload: '$foundLat,$foundLng,$lostItemId', // Pass lat,lng,itemId as payload for navigation on tap
+    payload: '$foundLat,$foundLng,$foundItemId,$notificationId' // Pass lat,lng,itemId as payload for navigation on tap
   );
 }

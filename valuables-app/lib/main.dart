@@ -74,7 +74,6 @@ Future<void> _initializeAsync() async {
         ).timeout(const Duration(seconds: 10));
         supabaseInitializedNotifier.value = true;
         debugPrint('_initializeAsync: Supabase initialized successfully');
-        // MatchService.listenForMatches();
       } on TimeoutException catch (e) {
         debugPrint('_initializeAsync: Supabase.initialize timed out: $e');
         supabaseInitializedNotifier.value = false;

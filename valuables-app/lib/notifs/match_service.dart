@@ -6,6 +6,7 @@ class MatchService {
   static RealtimeChannel? _channel;
 
   static void listenForMatches() {
+
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) return;
 
@@ -23,7 +24,7 @@ class MatchService {
       callback: (payload) async {
         final row = payload.newRecord;
         final data = row['data'] as Map<String, dynamic>? ?? {};
-        final lostItemId = data['lost_item_id'] as String? ?? '';
+        final foundItemId = data['found_item_id'] as String? ?? '';
         final foundLat = (data['found_lat'] as num?)?.toDouble() ?? 0.0;
         final foundLng = (data['found_lng'] as num?)?.toDouble() ?? 0.0;
 
@@ -31,15 +32,12 @@ class MatchService {
           title: row['title'] as String,
           body: row['body'] as String,
           notificationId: row['id'] as String,
-          lostItemId: lostItemId,
-          foundLat: foundLat, 
-          foundLng: foundLng, 
+          foundItemId: foundItemId,
+          foundLat: foundLat,
+          foundLng: foundLng,
         );
 
-        await Supabase.instance.client
-            .from('notifications')
-            .update({'is_read': true})
-            .eq('id', row['id']);
+      
       },
     )
     .subscribe((status, [error]) {

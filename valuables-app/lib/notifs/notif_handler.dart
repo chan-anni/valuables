@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:valuables/screens/map_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-final ValueNotifier<NotifTarget?> notifTargetNotifier = ValueNotifier(null);
 
 class NotifTarget {
   final double lat;
@@ -11,22 +11,26 @@ class NotifTarget {
   NotifTarget(this.lat, this.lng, this.itemId);
 }
 
-void handleNotificationTap(String? payload) {
+Future<void> handleNotificationTap(String? payload) async {
   if (payload == null) return;
 
   final parts = payload.split(',');
-  if (parts.length < 3) return;
+  if (parts.length < 4) return;
 
   final double? lat = double.tryParse(parts[0]);
   final double? lng = double.tryParse(parts[1]);
   final String itemId = parts[2].trim();
+  final String notificationId = parts[3].trim();
 
   if (lat == null || lng == null) return;
-  debugPrint('📍 lat: $lat, lng: $lng, itemId: $itemId');
-  notifTargetNotifier.value = NotifTarget(lat, lng, itemId);
+
+  await Supabase.instance.client
+      .from('notifications')
+      .update({'is_read': true})
+      .eq('id', notificationId);
 
   // Pushing another MapPage ontop of whatever the user is currently on (home, messages, or even another map) 
-  // to show the matched item from the notification. Inclues information in the MapPage constructor to highlight/zoom to
+  // to show the matched item arom the notification. Inclues information in the MapPage constructor to highlight/zoom to
   // the correct marker.
   Future.delayed(const Duration(milliseconds: 500), () {
     navigatorKey.currentState?.push( 
