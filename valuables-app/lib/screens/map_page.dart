@@ -64,12 +64,14 @@ class _MapPageState extends State<MapPage> {
         if (!mounted) return;
         try { await _addMarkersFuture; } catch (_) {}
         try {
-          final controller = await _controller.future;
-          await controller.animateCamera(
-            CameraUpdate.newLatLngZoom(
-              LatLng(widget.notifItemLat!, widget.notifItemLng!), 16),
-          );
-        } catch (e) {
+          if (_controller.isCompleted) {
+            final controller = await _controller.future;
+            await controller.animateCamera(
+              CameraUpdate.newLatLngZoom(
+                LatLng(widget.notifItemLat!, widget.notifItemLng!), 16),
+            );
+          }
+        }catch (e) {
           debugPrint('Error animating to notif: $e');
         }
       });
