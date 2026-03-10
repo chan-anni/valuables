@@ -14,7 +14,7 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _claimedFoundItems = [];
   List<dynamic> _unclaimedLostItems = [];
   List<dynamic> _unclaimedFoundItems = [];
-  List<dynamic> _oldAlerts = [];
+  // List<dynamic> _oldAlerts = [];
   String _searchQuery = '';
   bool _isLoading = true;
   String? _historyError;
@@ -34,7 +34,7 @@ class _HistoryPageState extends State<HistoryPage> {
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'lost')
+            .eq('type', 'lost')
             .eq('status', 'claimed')
             .order('created_at', ascending: false);
         
@@ -43,7 +43,7 @@ class _HistoryPageState extends State<HistoryPage> {
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'found')
+            .eq('type', 'found')
             .eq('status', 'claimed')
             .order('created_at', ascending: false);
 
@@ -52,7 +52,7 @@ class _HistoryPageState extends State<HistoryPage> {
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'lost')
+            .eq('type', 'lost')
             .neq('status', 'claimed')
             .order('created_at', ascending: false);
         
@@ -61,33 +61,33 @@ class _HistoryPageState extends State<HistoryPage> {
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'found')
+            .eq('type', 'found')
             .neq('status', 'claimed')
             .order('created_at', ascending: false);
 
-        // Load old alerts
-        List<dynamic> oldAlerts = [];
-        try {
-          final alerts = await _supabase
-              .from('alerts')
-              .select('*, item:items(*)')
-              .eq('user_id', userId)
-              .order('created_at', ascending: false)
-              .limit(50);
-          for (var a in alerts) {
-            if (a['item'] != null) oldAlerts.add(a['item']);
-          }
-        } catch (e) {
-          // Fallback if alerts table structure is different
-          oldAlerts = [];
-        }
+        // // Load old alerts
+        // List<dynamic> oldAlerts = [];
+        // try {
+        //   final alerts = await _supabase
+        //       .from('alerts')
+        //       .select('*, item:items(*)')
+        //       .eq('user_id', userId)
+        //       .order('created_at', ascending: false)
+        //       .limit(50);
+        //   for (var a in alerts) {
+        //     if (a['item'] != null) oldAlerts.add(a['item']);
+        //   }
+        // } catch (e) {
+        //   // Fallback if alerts table structure is different
+        //   oldAlerts = [];
+        // }
 
         setState(() {
           _claimedLostItems = claimedLost;
           _claimedFoundItems = claimedFound;
           _unclaimedLostItems = unclaimedLost;
           _unclaimedFoundItems = unclaimedFound;
-          _oldAlerts = oldAlerts;
+          // _oldAlerts = oldAlerts;
           _isLoading = false;
         });
       } else {
@@ -103,6 +103,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
   List<dynamic> _filterItems(List<dynamic> items) {
     return items.where((item) {
+      if (item == null) return false;
       final title = (item['title'] ?? '').toString().toLowerCase();
       final category = (item['category'] ?? '').toString().toLowerCase();
       final query = _searchQuery.toLowerCase();
@@ -186,14 +187,14 @@ class _HistoryPageState extends State<HistoryPage> {
                       color: secondaryColor,
                       items: _filterItems(_claimedFoundItems),
                     ),
-                    const SizedBox(height: 24),
-                    // Old Alerts Section
-                    _buildHistorySection(
-                      title: 'Past Match Alerts',
-                      icon: Icons.notifications,
-                      color: Colors.grey,
-                      items: _filterItems(_oldAlerts),
-                    ),
+                    // const SizedBox(height: 24),
+                    // // Old Alerts Section
+                    // _buildHistorySection(
+                    //   title: 'Past Match Alerts',
+                    //   icon: Icons.notifications,
+                    //   color: Colors.grey,
+                    //   items: _filterItems(_oldAlerts),
+                    // ),
                   ],
                 ),
               ),
@@ -258,7 +259,8 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildHistoryItem(dynamic item) {
-    final itemType = item['item_type']?.toString().toUpperCase() ?? 'UNKNOWN';
+    if (item == null) return const SizedBox.shrink();
+    final itemType = item['type']?.toString().toUpperCase() ?? 'UNKNOWN';
     final isLost = itemType == 'LOST';
     final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
     final status = item['status']?.toString() ?? 'unknown';
@@ -329,15 +331,15 @@ class _HistoryPageState extends State<HistoryPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: status == 'claimed' ? Colors.grey.shade300 : Colors.red.shade100,
+                        color: status == 'claimed' ? Colors.grey.shade300 : (status == 'active' ? Colors.green.shade100 : Colors.red.shade100),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        status.toUpperCase(),
+                        (isLost && status == 'claimed') ? 'REMOVED' : status.toUpperCase(),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: status == 'claimed' ? Colors.grey.shade700 : Colors.red.shade700,
+                          color: status == 'claimed' ? Colors.grey.shade700 : (status == 'active' ? Colors.green.shade700 : Colors.red.shade700),
                         ),
                       ),
                     ),

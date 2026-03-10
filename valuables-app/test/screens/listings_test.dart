@@ -166,7 +166,7 @@ void main() {
       expect(find.text('No Desc Item'), findsOneWidget);
     });
 
-    testWidgets('Defaults to Found style for unknown type', (WidgetTester tester) async {
+    testWidgets('Defaults to Unknown style for unknown type', (WidgetTester tester) async {
       final item = {
         'title': 'Unknown Type Item',
         'item_type': 'alien_technology',
@@ -174,8 +174,8 @@ void main() {
 
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: ItemCard(item: item))));
       
-      expect(find.byIcon(Icons.location_on), findsWidgets);
-      expect(find.byIcon(Icons.help_outline), findsNothing);
+      expect(find.byIcon(Icons.help), findsWidgets);
+      expect(find.byIcon(Icons.location_on), findsNothing);
     });
 
     testWidgets('Handles missing title and category', (WidgetTester tester) async {
