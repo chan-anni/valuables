@@ -161,13 +161,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   Marker _buildMarker(Map<String, dynamic> item, {bool isNotifItem = false}) {
-    final rawDescription = item['description'];
-    final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
-        ? 'No description added'
-        : rawDescription.toString();
-    final itemType = (item['type'] as String?)?.toUpperCase() ?? 'UNKNOWN';
     final category = item['category'] as String? ?? 'Unknown';
-    final createdAt = DateTime.tryParse(item['created_at'] ?? '');
 
     return Marker(
       markerId: MarkerId(item['id'].toString()),
