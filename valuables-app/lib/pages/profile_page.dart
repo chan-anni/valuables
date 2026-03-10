@@ -249,6 +249,40 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
     );
   }
 
+  Future<void> _onClaimItem(dynamic item) async {
+    final itemId = item['id'].toString();
+    final rawType = item['type'] ?? item['item_type'];
+    final isLost = rawType?.toString().toLowerCase() == 'lost';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isLost ? 'Remove Listing' : 'Claim Item'),
+        content: Text(isLost 
+            ? 'Are you sure you want to remove this listing? This implies you have found the item.' 
+            : 'Are you sure you want to mark this item as claimed? This implies the owner has received the item.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(isLost ? 'Remove' : 'Claimed')),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _supabase.from('items').update({'status': 'claimed'}).eq('id', itemId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item marked as claimed')));
+          _loadUserData(); // Refresh list
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error claiming item: $e')));
+        }
+      }
+    }
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     // NOTE: Ensure NSCameraUsageDescription and NSPhotoLibraryUsageDescription are in Info.plist
@@ -543,9 +577,40 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                     );
                   },
                 ),
+                initiallyExpanded: false,
+                children: [
+                  if (_userItems.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.format_list_bulleted_rounded, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                          SizedBox(height: 8),
+                          Text('No active listings', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _userItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _userItems[index];
+                        return ItemCard(
+                          item: item,
+                          onClaim: () => _onClaimItem(item),
+                        );
+                      },
+                    ),
+                ],
+              ),
             ],
-
-            const SizedBox(height: 32),
 
             // Alerts Section (Moved below listings)
             if (!_isEditing) ...[
