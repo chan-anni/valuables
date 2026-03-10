@@ -154,7 +154,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
       });
     }
   } catch (e) {
-    debugPrint('Error loading profile data: $e');
+    SnackBar(content: Text('Error loading profile data'));
   }
 }
 
