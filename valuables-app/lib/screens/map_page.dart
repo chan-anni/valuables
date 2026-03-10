@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:valuables/screens/lost_item_form.dart';
+import 'package:valuables/auth/auth_service.dart';
+import 'package:valuables/chat/chat_service.dart';
+import 'package:valuables/screens/chat_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:valuables/theme_controller.dart';
 
@@ -328,13 +331,7 @@ class _MapPageState extends State<MapPage> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LostItemForm()),
-                            );
-                          },
+                          onPressed: () => startClaim(item['id'].toString()),
                           icon: const Icon(Icons.add),
                           label: const Text('Submit Claim'),
                           style: ElevatedButton.styleFrom(
@@ -434,6 +431,56 @@ void _applyFilters() {
       }
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
+    }
+  }
+
+  Future<void> startClaim(String itemId) async {
+    final chatService = GetIt.I<ChatService>();
+    final authService = GetIt.I<AuthService>();
+    final supabase = Supabase.instance.client;
+
+    try {
+      // 1. Get the current user (The "Claimer")
+      final currentUser = authService.getCurrentUserSession()?.user;
+      if (currentUser == null) return;
+
+      // 2. Fetch the Item Holder's ID (The "Owner")
+      // We use .single() because we only expect one owner per item
+      final itemData = await supabase
+          .from("items")
+          .select("user_id, title")
+          .eq('id', itemId)
+          .single();
+
+      final String ownerId = itemData['user_id'];
+      final String itemTitle = itemData['title'];
+
+      // 3. Create the Room and get the new Room ID
+      // Note: I updated ChatService to return the room ID earlier
+      final room = await chatService.createRoom(
+        name: itemTitle,
+        itemId: itemId,
+      );
+      if (room == null) return;
+
+      final String roomId = room['id'];
+
+      // 4. Add both users to the room
+      // Assuming your addUsersToRoom now accepts a List of IDs or Users
+      await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
+
+      // 5. Navigate to the chat
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => ChatScreen(chatRoom: roomId),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Failed to start claim: $e");
+      // Show an error snackbar here if you like
     }
   }
 
