@@ -3,18 +3,15 @@ Valuables is a lost and found app platform that connects item owners and finders
 
 # How To Install The Software
 ## Android
-The app will be available in Apk for download. It will require at least **Android 5.0**
+The app will be available in Apk for download. It will require at least **Android 5.0**.
+APK located in */build/android*
 ## iOS
-Through Appstore once it is launched. 
+Currently unavailable for consumer download, it will be published in Appstore once it is launched. 
 The app requires **iOS 15 or later**
-
 # How To Run The Software
 The user can just open the app and it will be functional for use as long as they have the versions required in [How to install the Software](#how-to-install-the-software).
-
 # How To Use The Software
-
-The software is still in development, all the incomplete features will be marked with **IP (In Progress)**
-
+The software is still in development, all the incomplete features will be marked with **IP (In Progress)**. If you encounter a bug, please don't hesitate to contact us or report it (see [[user_manual#How to report a bug]])
 ### Navigation Bar
 Use the navigation bar to redirect to different pages within the application:
   - [Landing/Map Page](#landing/map-page)
@@ -24,7 +21,7 @@ Use the navigation bar to redirect to different pages within the application:
   - [Profile page](#profile/account-page)
   
 ### Landing/Map Page
-![Map page picture](Map.jpg)\
+![Map page picture|213](Map.jpg)\
 In the map page, the user can navigate around and see the pins which represent the locations of where the corresponding item was found.
 
 Pins: Each pin is an item reported by another user, clicking on it reveals more information about the item.
@@ -68,5 +65,3 @@ Details that should be included in the report:
 
 ## Known Bugs
 We have some bugs that are in our GitHub "Issues" tab for the things that are still in progress.
-
-- User can create multiple chats if they start a claim on the same item

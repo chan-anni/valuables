@@ -40,7 +40,7 @@ flutter doctor
 The project is hosted in a single repository. Clone it and navigate to the application directory
 ```
 git clone https://github.com/chan-anni/valuables.git
-cd valuables-app
+cd valuables/valuables-app
 ```
 ### Directory Layout
 When developing you will mostly work in valuables-app/lib/
@@ -67,9 +67,9 @@ valuables/
 All contributions should be made onto a new branch which later gets merged into the developing branch. Main holds release code only.
 ### Environment Setup
 
-This project uses flutter_dotenv to manage secrets. A .env file is required at the project root.
+This project uses flutter_dotenv to manage secrets. **A .env file is required at the project root.**
 
-Add the following keys (get values from a team member):
+Copy the .env.example, remove the ".example" from the name, and add the following keys (create your own):
 ```
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -78,12 +78,29 @@ GOOGLE_CLIENT_ID=client_id
 GOOGLE_SERVER_CLIENT_ID=server_client_id
 ```
 
-Google Maps — platform-level key registration
-
-google_maps_flutter requires the API key to be registered natively on each platform, in addition to .env.
+#### Creating your own API keys:
+- [Google Cloud Console - Maps](https://console.cloud.google.com/google/maps-apis/credentials)(If you don't have a project on Google Cloud Console, initialize one first and then use the link to navigate to the panel)
+	- *GOOGLE_MAP_KEY*:
+		- Create an API key with no App restriction (for the purpose of testing on multiple platform)
+		- Include the following 3 APIs in the selection:
+			1. Maps SDK for Android (or iOS, depending on your platform)
+			2. Places API
+			3. Places API (New)
+		- Paste the API key generated to *GOOGLE_MAP_KEY* in **.env**
+	- *GOOGLE_CLIENT_ID* and *GOOGLE_SERVER_CLIENT_ID*:
+		- Create a OAuth 2.0 Client ID based on your platform
+		- Follow the steps to filling the information
+		- Paste the *GOOGLE_CLIENT_ID* and *GOOGLE_SERVER_CLIENT_ID* into **.env**
+- [Supabase](https://supabase.com/dashboard/) (If you don't have a project on Supabase, initialize one first and then use the link to navigate to the panel)
+	- *SUPABASE_URL*:
+		- Get the *SUPABASE_URL* in the project panel and paste into **.env**
+	- *SUPABASE_ANON_KEY*:
+		- Get the *SUPABASE_ANON_KEY* in Project Settings -> API Keys -> Publishable key and paste into **.env**
 #### Android
-Add inside <application> in android/app/src/main/AndroidManifest.xml (you may have to make this file). Replace the API key in the file in on the line "android:value="API_KEY_HERE":
+Add inside <application> in android/app/src/main/AndroidManifest.xml (you may have to make this file). Make sure the file has "${GOOGLE_MAP_KEY}" field. The build.gradle.kts will replace it automatically with the .env file's value.
+
 ```xml
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
         android:label="valuables"
@@ -91,7 +108,7 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml (you may ha
         android:icon="@mipmap/ic_launcher">
         <meta-data 
             android:name="com.google.android.geo.API_KEY"
-            android:value="API_KEY_HERE"
+            android:value="${GOOGLE_MAP_KEY}"
             />
         <activity
             android:name=".MainActivity"
@@ -123,9 +140,8 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml (you may ha
         </intent>
     </queries>
 </manifest>
-
 ```
-DO NOT commit this file. It should already be in the .gitignore. 
+
 ### iOS
 Add ios/Runner/AppDelegate.swift (you may have to make this file). Replace the API key where it says "Google Maps API Key here":
 ```swift
@@ -231,7 +247,7 @@ flutter test
 ```
 Run a specific test file
 ```
-flutter test test/services/location_service_test.dart
+flutter test test/auth_test/auth_service_test.dart
 ```
 Run tests with code coverage
 ```
@@ -245,10 +261,16 @@ The test folder should mirror the lib/ directory.
 In test files themselves, use test() for logic and testWidgets() for UI components. 
 Tests requiring Supabase interaction may require a valid .env file or will use mocked responses defined in the test/ directory.
 
-## Release Procedures
-Update Versioning: Increment the version and build number in pubspec.yaml (e.g., version: 1.0.1+2) and tag the release as well in git.
+- For unit or widget testing, Flutter has integrated functions in *flutter_test* package that allows for checking UI elements, navigation, and testing functions.
 
-Documentation: Ensure any new features are updated in the user-facing documentation.
+- For integration testing or functions that depends on external APIs, use *Mocktail* to create mock responses to ensure the business logic is correct. 
+
+- Finally, run 'flutter test --coverage' to generate a code coverage report. Use it with [Flutter Coverage](https://marketplace.visualstudio.com/items?itemName=Flutterando.flutter-coverage) to see the result of the test.
+
+## Release Procedures
+Update Versioning: Increment the version and build number in pubspec.yaml (e.g., version: 1.0.1+2) and tag the release as well in git. Update the README with the latest release and link to the release note if any.
+
+Documentation: Ensure any new features are updated in the user-facing documentation. Include a list of bugs fixed or issues addressed and link them correctly.
 
 Formatting: Run the following to ensure the code is formatted properly and readable:
 ```flutter format <you file path here>```
