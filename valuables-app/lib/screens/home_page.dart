@@ -221,17 +221,16 @@ class ItemCard extends StatelessWidget {
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
               if (onViewOnMap != null)
-                ElevatedButton.icon(
+                ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
                     onViewOnMap!(item);
                   },
-                  icon: const Icon(Icons.map),
-                  label: const Text('View on Map'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                   ),
+                  child: const Text('View Full Details'),
                 ),
               if (onClaim != null)
                 FilledButton(
