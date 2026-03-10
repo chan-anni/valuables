@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:valuables/claims/claims_service.dart';
+import 'package:valuables/claims/claims_request_page.dart';
 import 'package:valuables/screens/chat_screen.dart';
 
 class ChatPage extends StatefulWidget {
@@ -16,12 +18,14 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   final _authService = GetIt.I<AuthService>();
   final _supabase = Supabase.instance.client;
+  final _claimsService = ClaimsService();
 
   final _roomsController =
       StreamController<List<Map<String, dynamic>>>.broadcast();
   StreamSubscription<List<Map<String, dynamic>>>? _realtimeSub;
 
   String? _userId;
+  int _pendingClaimCount = 0;
 
   @override
   void initState() {
@@ -29,6 +33,8 @@ class _ChatPageState extends State<ChatPage> {
     _userId = _authService.getCurrentUserSession()?.user.id;
 
     if (_userId == null) return;
+
+    _loadPendingClaimCount();
 
     _realtimeSub = _supabase
         .from('chat_room_member')
@@ -39,6 +45,11 @@ class _ChatPageState extends State<ChatPage> {
           (rooms) => _roomsController.add(rooms),
           onError: (e) => _roomsController.addError(e),
         );
+  }
+
+  Future<void> _loadPendingClaimCount() async {
+    final count = await _claimsService.fetchPendingClaimCount();
+    if (mounted) setState(() => _pendingClaimCount = count);
   }
 
   @override
@@ -81,17 +92,18 @@ class _ChatPageState extends State<ChatPage> {
       List<Map<String, dynamic>>.from(members),
     );
     _roomsController.add(rooms);
+    _loadPendingClaimCount();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Messages"), elevation: 0),
+      appBar: AppBar(title: const Text('Messages'), elevation: 0),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _roomsController.stream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           if (!snapshot.hasData) {
@@ -100,13 +112,111 @@ class _ChatPageState extends State<ChatPage> {
 
           final rooms = snapshot.data!;
 
-          if (rooms.isEmpty) return _buildEmptyState();
+          return Column(
+            children: [
+              // Pending claim requests banner — only shown if count > 0
+              if (_pendingClaimCount > 0)
+                _buildRequestsBanner(),
 
-          return ListView.builder(
-            itemCount: rooms.length,
-            itemBuilder: (context, index) => _buildRoomTile(rooms[index]),
+              // Conversation list
+              Expanded(
+                child: rooms.isEmpty
+                    ? _buildEmptyState()
+                    : ListView.builder(
+                        itemCount: rooms.length,
+                        itemBuilder: (context, index) =>
+                            _buildRoomTile(rooms[index]),
+                      ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildRequestsBanner() {
+    final primary = Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ClaimRequestsPage()),
+        );
+        // Refresh count when returning from requests page
+        _loadPendingClaimCount();
+      },
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: isDark
+              ? primary.withValues(alpha: 0.2)
+              : primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: primary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(Icons.mark_chat_unread_outlined, color: primary, size: 26),
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      '$_pendingClaimCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Message Requests',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: primary,
+                    ),
+                  ),
+                  Text(
+                    '$_pendingClaimCount person${_pendingClaimCount > 1 ? 's are' : ' is'} claiming an item you found',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: primary),
+          ],
+        ),
       ),
     );
   }
@@ -119,7 +229,7 @@ class _ChatPageState extends State<ChatPage> {
           Icon(Icons.chat_bubble_outline, size: 48, color: Colors.grey),
           SizedBox(height: 16),
           Text(
-            "No active conversations",
+            'No active conversations',
             style: TextStyle(color: Colors.grey, fontSize: 16),
           ),
         ],
@@ -143,7 +253,7 @@ class _ChatPageState extends State<ChatPage> {
       leading: CircleAvatar(
         backgroundImage: NetworkImage(
           roomImg ??
-              "https://zhurzsbvxcsaexcbqown.supabase.co/storage/v1/object/public/items/items/1771975266212.jpg",
+              'https://zhurzsbvxcsaexcbqown.supabase.co/storage/v1/object/public/items/items/1771975266212.jpg',
         ),
         radius: 24,
       ),
