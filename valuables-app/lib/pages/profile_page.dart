@@ -180,6 +180,14 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
     if (confirmed == true) {
       try {
         await _supabase.from('items').update({'status': 'claimed'}).eq('id', itemId);
+        await _supabase
+          .from('notifications')
+          .delete()
+          .contains('data', {'found_item_id': itemId});
+          await _supabase
+          .from('notifications')
+          .delete()
+          .contains('data', {'lost_item_id': itemId});
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Item marked as claimed')));
           _loadUserData(); // Refresh list
