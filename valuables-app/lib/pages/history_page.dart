@@ -64,29 +64,29 @@ class _HistoryPageState extends State<HistoryPage> {
             .neq('status', 'claimed')
             .order('created_at', ascending: false);
 
-        // Load old alerts
-        List<dynamic> oldAlerts = [];
-        try {
-          final alerts = await _supabase
-              .from('alerts')
-              .select('*, item:items(*)')
-              .eq('user_id', userId)
-              .order('created_at', ascending: false)
-              .limit(50);
-          for (var a in alerts) {
-            if (a['item'] != null) oldAlerts.add(a['item']);
-          }
-        } catch (e) {
-          // Fallback if alerts table structure is different
-          oldAlerts = [];
-        }
+        // // Load old alerts
+        // List<dynamic> oldAlerts = [];
+        // try {
+        //   final alerts = await _supabase
+        //       .from('alerts')
+        //       .select('*, item:items(*)')
+        //       .eq('user_id', userId)
+        //       .order('created_at', ascending: false)
+        //       .limit(50);
+        //   for (var a in alerts) {
+        //     if (a['item'] != null) oldAlerts.add(a['item']);
+        //   }
+        // } catch (e) {
+        //   // Fallback if alerts table structure is different
+        //   oldAlerts = [];
+        // }
 
         setState(() {
           _claimedLostItems = claimedLost;
           _claimedFoundItems = claimedFound;
           _unclaimedLostItems = unclaimedLost;
           _unclaimedFoundItems = unclaimedFound;
-          _oldAlerts = oldAlerts;
+          // _oldAlerts = oldAlerts;
           _isLoading = false;
         });
       } else {

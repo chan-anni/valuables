@@ -22,7 +22,8 @@ class ChatScreenState extends State<ChatScreen> {
 
   Map<String, dynamic>? room;
   Map<String, dynamic>? user;
-  final _supabase = Supabase.instance.client; // Add this
+  String? _itemImageUrl;
+  final _supabase = Supabase.instance.client;
 
   bool _isLoading = true; // Add a loading flag
 
@@ -42,19 +43,22 @@ class ChatScreenState extends State<ChatScreen> {
       return;
     }
 
+    final itemData = fetchedRoom['items'] as Map<String, dynamic>?;
+
     // Load the chat history before updating the UI state
     await _loadHistoricalMessages();
 
     setState(() {
       room = fetchedRoom;
       user = fetchedUser;
+      _itemImageUrl = itemData?['image_url'] as String?;
       _isLoading = false;
     });
 
     _chatClient.useRealtimeChat(
       roomId: widget.chatRoom,
       userId: user!['id'],
-      onMessageReceived: handleIncomingMessage,
+      onMessageReceived: _handleIncomingMessage,
     );
   }
 
@@ -100,11 +104,60 @@ class ChatScreenState extends State<ChatScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    debugPrint(_itemImageUrl);
+
     return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundImage: _itemImageUrl != null
+                  ? NetworkImage(_itemImageUrl!)
+                  : null,
+              child: _itemImageUrl == null
+                  ? const Icon(Icons.image, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                room?['name'] ?? 'Chat',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'delete') {
+                _confirmDelete(context, room!['id']); // Call your delete logic
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(
+                      'Delete Conversation',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: Chat(
         chatController: _chatController,
         currentUserId: user!['id'], // Bracket notation
-        onMessageSend: (text) => handleSend(text),
+        onMessageSend: (text) => _handleSend(text),
         resolveUser: (chat_core.UserID id) async {
           return chat_core.User(id: id, name: user!["id"]);
         },
@@ -112,7 +165,7 @@ class ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  void handleSend(String text) async {
+  void _handleSend(String text) async {
     if (text.trim().isEmpty) return;
 
     final newMessage = chat_core.TextMessage(
@@ -127,7 +180,7 @@ class ChatScreenState extends State<ChatScreen> {
     await _chatClient.sendMessage(roomId: widget.chatRoom, text: text);
   }
 
-  void handleIncomingMessage(Map<String, dynamic> record) {
+  void _handleIncomingMessage(Map<String, dynamic> record) {
     if (record['author_id'] == user!['id']) return; // Bracket notation
 
     final incomingMessage = chat_core.TextMessage(
@@ -140,5 +193,36 @@ class ChatScreenState extends State<ChatScreen> {
     setState(() {
       _chatController.insertMessage(incomingMessage);
     });
+  }
+
+  void _confirmDelete(BuildContext context, String roomId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Conversation?'),
+          content: const Text('Are you sure you want to delete this chat?'),
+          actions: [
+            // 1. The Cancel Button
+            TextButton(
+              onPressed: () => Navigator.pop(context), // Just closes the pop-up
+              child: const Text('Cancel'),
+            ),
+            // 2. The Delete Button
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                await _chatService.deleteRoom(roomId: roomId);
+                if (mounted) {
+                  navigator.pop(); // Closes the dialog
+                  navigator.pop(); // Leaves the chat screen
+                }
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

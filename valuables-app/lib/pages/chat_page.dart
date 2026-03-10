@@ -1,8 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:valuables/screens/chat_screen.dart';
 
 class ChatPage extends StatefulWidget {
@@ -16,82 +17,96 @@ class _ChatPageState extends State<ChatPage> {
   final _authService = GetIt.I<AuthService>();
   final _supabase = Supabase.instance.client;
 
-  List<types.Room> _chatRooms = [];
-  bool _isLoading = true;
+  final _roomsController =
+      StreamController<List<Map<String, dynamic>>>.broadcast();
+  StreamSubscription<List<Map<String, dynamic>>>? _realtimeSub;
+
+  String? _userId;
 
   @override
   void initState() {
     super.initState();
-    _fetchChatRooms();
+    _userId = _authService.getCurrentUserSession()?.user.id;
+
+    if (_userId == null) return;
+
+    _realtimeSub = _supabase
+        .from('chat_room_member')
+        .stream(primaryKey: ['id'])
+        .eq('member_id', _userId!)
+        .asyncMap((members) => _fetchRoomDetails(members))
+        .listen(
+          (rooms) => _roomsController.add(rooms),
+          onError: (e) => _roomsController.addError(e),
+        );
   }
 
-  Future<void> _fetchChatRooms() async {
-    final user = _authService.getCurrentUserSession()?.user;
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    _roomsController.close();
+    super.dispose();
+  }
 
-    if (user == null) {
-      if (mounted) setState(() => _isLoading = false);
-      return;
-    }
+  Future<List<Map<String, dynamic>>> _fetchRoomDetails(
+    List<Map<String, dynamic>> members,
+  ) async {
+    if (members.isEmpty) return [];
 
-    try {
-      // Use Supabase foreign key join syntax to fetch the room's name
-      // Note: Replace "chat_room" with the actual name of your rooms table if it is different
-      final response = await _supabase
-          .from("chat_room_member")
-          .select("chat_room_id, chat_room(name)")
-          .eq("member_id", user.id);
+    final roomIds = members.map((m) => m['chat_room_id'] as String).toList();
 
-      final List<dynamic> records = response as List<dynamic>;
+    final response = await _supabase
+        .from('chat_room')
+        .select('''
+          id,
+          name,
+          items (image_url),
+          message (text, created_at)
+        ''')
+        .inFilter('id', roomIds)
+        .order('created_at', referencedTable: 'message', ascending: false);
 
-      final List<types.Room> parsedRooms = records.map((record) {
-        // Extract the name from the joined table data
-        final roomData = record['chat_room'] as Map<String, dynamic>?;
-        final roomName = roomData?['name'] ?? 'Item Discussion';
+    return List<Map<String, dynamic>>.from(response);
+  }
 
-        return types.Room(
-          id: record['chat_room_id'],
-          type: types.RoomType.direct,
-          users: [],
-          name: roomName, // Pass the fetched name here
-        );
-      }).toList();
+  Future<void> _refreshRooms() async {
+    if (_userId == null) return;
 
-      if (mounted) {
-        setState(() {
-          _chatRooms = parsedRooms;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error fetching chat rooms: $e");
-      if (mounted) setState(() => _isLoading = false);
-    }
+    final members = await _supabase
+        .from('chat_room_member')
+        .select()
+        .eq('member_id', _userId!);
+
+    final rooms = await _fetchRoomDetails(
+      List<Map<String, dynamic>>.from(members),
+    );
+    _roomsController.add(rooms);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Messages"), elevation: 0),
-      body: Column(
-        children: [
-          const Padding(padding: EdgeInsets.all(16.0), child: MyCustomForm()),
-          const Divider(height: 1),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _chatRooms.isEmpty
-                ? _buildEmptyState()
-                : ListView.separated(
-                    itemCount: _chatRooms.length,
-                    separatorBuilder: (context, index) =>
-                        const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final room = _chatRooms[index];
-                      return _buildRoomTile(room);
-                    },
-                  ),
-          ),
-        ],
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _roomsController.stream,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final rooms = snapshot.data!;
+
+          if (rooms.isEmpty) return _buildEmptyState();
+
+          return ListView.builder(
+            itemCount: rooms.length,
+            itemBuilder: (context, index) => _buildRoomTile(rooms[index]),
+          );
+        },
       ),
     );
   }
@@ -112,86 +127,39 @@ class _ChatPageState extends State<ChatPage> {
     );
   }
 
-  Widget _buildRoomTile(types.Room room) {
+  Widget _buildRoomTile(Map<String, dynamic> room) {
+    final roomId = room['id'] as String;
+    final roomName = room['name'] as String? ?? 'Item Discussion';
+    final itemData = room['items'] as Map<String, dynamic>?;
+    final roomImg = itemData?['image_url'] as String?;
+
+    final messageList = room['message'] as List<dynamic>? ?? [];
+    final lastMessage = messageList.isNotEmpty
+        ? (messageList.first as Map<String, dynamic>)['text'] as String? ?? ''
+        : 'Tap to start the conversation';
+
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       leading: CircleAvatar(
-        backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-        child: Icon(
-          Icons.inventory_2_outlined,
-          color: Theme.of(context).primaryColor,
+        backgroundImage: NetworkImage(
+          roomImg ??
+              "https://zhurzsbvxcsaexcbqown.supabase.co/storage/v1/object/public/items/items/1771975266212.jpg",
         ),
+        radius: 24,
       ),
       title: Text(
-        room.name ?? 'Chat ${room.id.substring(0, 4)}...',
+        roomName,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-      subtitle: const Text(
-        "Tap to view messages",
-        style: TextStyle(color: Colors.grey),
-      ),
+      subtitle: Text(lastMessage, style: const TextStyle(color: Colors.grey)),
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ChatScreen(chatRoom: room.id),
-          ),
+          MaterialPageRoute(builder: (context) => ChatScreen(chatRoom: roomId)),
         );
+        _refreshRooms();
       },
-    );
-  }
-}
-
-class MyCustomForm extends StatefulWidget {
-  const MyCustomForm({super.key});
-
-  @override
-  MyCustomFormState createState() => MyCustomFormState();
-}
-
-class MyCustomFormState extends State<MyCustomForm> {
-  final TextEditingController textController = TextEditingController();
-
-  @override
-  void dispose() {
-    textController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: TextFormField(
-            controller: textController,
-            decoration: InputDecoration(
-              hintText: 'Enter a Room ID',
-              isDense: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onPressed: () {
-            final newRoomId = textController.text.trim();
-            if (newRoomId.isNotEmpty) {
-              textController.clear();
-            }
-          },
-          child: const Text("Join"),
-        ),
-      ],
     );
   }
 }

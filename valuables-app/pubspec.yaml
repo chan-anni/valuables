@@ -53,6 +53,7 @@ dependencies:
   flutter_local_notifications: ^17.0.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
 
@@ -109,3 +110,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/valuables.png" # Replace with your actual path
+  adaptive_icon_background: "#FFFFFF" # Background color for Android adaptive icons
+  adaptive_icon_foreground: "assets/images/valuables.png" # The actual logo
