@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/theme_controller.dart';
 
 class HomePage extends StatefulWidget {
-  final VoidCallback? onBrowsePressed;
+  final void Function(dynamic item)? onBrowsePressed;
   final SupabaseClient? supabaseClient;
   
   const HomePage({super.key, this.onBrowsePressed, this.supabaseClient});
@@ -67,9 +67,11 @@ class _HomePageState extends State<HomePage> {
       final data = await query.order('created_at', ascending: false).limit(50);
 
       // Filter to only unclaimed items and sort by upload time (newest first)
-      List<dynamic> unclaimedItems = data
-          .where((item) => item['status'] != 'claimed' && item['status'] != 'found')
-          .toList();
+      List<dynamic> unclaimedItems = data.where((item) {
+        final type = (item['type'] ?? item['item_type'] ?? '').toString().toLowerCase();
+        final status = (item['status'] ?? '').toString().toLowerCase();
+        return type.contains('found') && !type.contains('lost') && status != 'claimed';
+      }).toList();
       
       unclaimedItems.sort((a, b) {
         final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -148,6 +150,9 @@ class _HomePageState extends State<HomePage> {
                     final item = _recentItems[index];
                     return ItemCard(
                       item: item,
+                      onViewOnMap: (selectedItem) {
+                        widget.onBrowsePressed?.call(selectedItem);
+                      },
                     );
                   },
                 ),
@@ -163,8 +168,9 @@ class _HomePageState extends State<HomePage> {
 class ItemCard extends StatelessWidget {
   final dynamic item;
   final VoidCallback? onClaim;
+  final void Function(dynamic item)? onViewOnMap;
 
-  const ItemCard({super.key, required this.item, this.onClaim});
+  const ItemCard({super.key, required this.item, this.onClaim, this.onViewOnMap});
 
   @override
   Widget build(BuildContext context) {
@@ -210,15 +216,23 @@ class ItemCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(item['description'] ?? 'No description provided.'),
                 const SizedBox(height: 16),
-                if (expirationDate != null)
-                  Text(
-                    'Expires on: ${expirationDate.year}-${expirationDate.month}-${expirationDate.day}',
-                    style: TextStyle(color: Colors.red.shade300, fontStyle: FontStyle.italic),
-                  ),
               ],
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+              if (onViewOnMap != null)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onViewOnMap!(item);
+                  },
+                  icon: const Icon(Icons.map),
+                  label: const Text('View on Map'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               if (onClaim != null)
                 FilledButton(
                   onPressed: () {

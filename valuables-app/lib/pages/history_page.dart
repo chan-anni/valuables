@@ -170,6 +170,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       icon: Icons.access_time,
                       color: Colors.grey,
                       items: _filterItems([..._unclaimedLostItems, ..._unclaimedFoundItems]),
+                      initiallyExpanded: false,
                     ),
                     const SizedBox(height: 24),
                     // Claimed Lost Items Section
@@ -207,43 +208,44 @@ class _HistoryPageState extends State<HistoryPage> {
     required IconData icon,
     required Color color,
     required List<dynamic> items,
+    bool initiallyExpanded = false,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ExpansionTile(
+      initiallyExpanded: initiallyExpanded,
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 12),
+      shape: const Border(),
+      collapsedShape: const Border(),
+      title: Row(
+        children: [
+          Icon(icon, size: 24, color: color),
+          const SizedBox(width: 8),
+          Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text('${items.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+          ),
+        ],
+      ),
       children: [
-        Row(
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text('${items.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
         if (items.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
                 'No items in this category',
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey.shade600),
               ),
             ),
           )

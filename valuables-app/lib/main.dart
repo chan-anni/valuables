@@ -159,21 +159,22 @@ class Navigation extends StatefulWidget {
 
 class _NavigationState extends State<Navigation> {
   int currentPageIndex = 0;
+  dynamic _itemToFocusOnMap;
+
   @override
   void initState() {
     super.initState();
     supabaseInitializedNotifier.addListener(_onSupabaseReady); // Check if Supabase is ready before setting up auth listener
     _onSupabaseReady(); // Calls the Auth Listener setup inside of it, so no need to double call
-
-
   }
+
   void _onSupabaseReady() {
     if (supabaseInitializedNotifier.value) {
       _setupAuthListener();
       supabaseInitializedNotifier.removeListener(_onSupabaseReady);
     }
   }
-
+  
   void _setupAuthListener() {
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       // Covers both sign in and app start with existing session
@@ -202,25 +203,26 @@ class _NavigationState extends State<Navigation> {
     super.dispose();
   }
 
-  void setPageIndex(int index) {
+  void setPageIndex(int index, {dynamic item}) {
     setState(() {
       currentPageIndex = index;
+      _itemToFocusOnMap = item;
     });
   }
-
-  // pages left->right: Map, Listings, (center FAB -- allows us to make form), Messages, Account
-  late final List<Widget> pages = [
-    MapPage(),
-    const HomePage(),
-    const SizedBox.shrink(), // placeholder for center FAB
-    const ChatPage(),
-    const ProfilePage(),
-  ];
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // pages left->right: Map, Listings, (center FAB -- allows us to make form), Messages, Account
+    final List<Widget> pages = [
+      MapPage(itemToFocus: _itemToFocusOnMap),
+      HomePage(onBrowsePressed: (item) => setPageIndex(0, item: item)),
+      const SizedBox.shrink(), // placeholder for center FAB
+      const ChatPage(),
+      const ProfilePage(),
+    ];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Valuables')),
