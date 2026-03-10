@@ -103,7 +103,7 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadItems() async {
     if (!supabaseInitializedNotifier.value) return;
     try {
-      final data = await Supabase.instance.client.from('items').select().eq('type', 'found'); // Only load found items for the map
+      final data = await Supabase.instance.client.from('items').select().eq('type', 'found').eq('status', 'active'); // Only load found items for the map
       _allItems = List<Map<String, dynamic>>.from(data);
       if (widget.notifItemId != null) {
         _buildNotificationMarker();
