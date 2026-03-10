@@ -14,7 +14,7 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _claimedFoundItems = [];
   List<dynamic> _unclaimedLostItems = [];
   List<dynamic> _unclaimedFoundItems = [];
-  List<dynamic> _oldAlerts = [];
+  // List<dynamic> _oldAlerts = [];
   String _searchQuery = '';
   bool _isLoading = true;
   String? _historyError;
@@ -65,29 +65,29 @@ class _HistoryPageState extends State<HistoryPage> {
             .neq('status', 'claimed')
             .order('created_at', ascending: false);
 
-        // Load old alerts
-        List<dynamic> oldAlerts = [];
-        try {
-          final alerts = await _supabase
-              .from('alerts')
-              .select('*, item:items(*)')
-              .eq('user_id', userId)
-              .order('created_at', ascending: false)
-              .limit(50);
-          for (var a in alerts) {
-            if (a['item'] != null) oldAlerts.add(a['item']);
-          }
-        } catch (e) {
-          // Fallback if alerts table structure is different
-          oldAlerts = [];
-        }
+        // // Load old alerts
+        // List<dynamic> oldAlerts = [];
+        // try {
+        //   final alerts = await _supabase
+        //       .from('alerts')
+        //       .select('*, item:items(*)')
+        //       .eq('user_id', userId)
+        //       .order('created_at', ascending: false)
+        //       .limit(50);
+        //   for (var a in alerts) {
+        //     if (a['item'] != null) oldAlerts.add(a['item']);
+        //   }
+        // } catch (e) {
+        //   // Fallback if alerts table structure is different
+        //   oldAlerts = [];
+        // }
 
         setState(() {
           _claimedLostItems = claimedLost;
           _claimedFoundItems = claimedFound;
           _unclaimedLostItems = unclaimedLost;
           _unclaimedFoundItems = unclaimedFound;
-          _oldAlerts = oldAlerts;
+          // _oldAlerts = oldAlerts;
           _isLoading = false;
         });
       } else {
@@ -187,14 +187,14 @@ class _HistoryPageState extends State<HistoryPage> {
                       color: secondaryColor,
                       items: _filterItems(_claimedFoundItems),
                     ),
-                    const SizedBox(height: 24),
-                    // Old Alerts Section
-                    _buildHistorySection(
-                      title: 'Past Match Alerts',
-                      icon: Icons.notifications,
-                      color: Colors.grey,
-                      items: _filterItems(_oldAlerts),
-                    ),
+                    // const SizedBox(height: 24),
+                    // // Old Alerts Section
+                    // _buildHistorySection(
+                    //   title: 'Past Match Alerts',
+                    //   icon: Icons.notifications,
+                    //   color: Colors.grey,
+                    //   items: _filterItems(_oldAlerts),
+                    // ),
                   ],
                 ),
               ),

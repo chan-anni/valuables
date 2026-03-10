@@ -225,7 +225,7 @@ class ItemCard extends StatelessWidget {
                     Navigator.pop(context);
                     onClaim!();
                   },
-                  child: Text(isLost ? 'Remove' : 'Mark Claimed'),
+                  child: Text(isLost ? 'Remove' : 'Claimed'),
                 ),
             ],
           ),
@@ -238,6 +238,13 @@ class ItemCard extends StatelessWidget {
           color: isDark ? const Color(0xFF252525) : Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 3,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -325,17 +332,15 @@ class ItemCard extends StatelessWidget {
                 if (onClaim != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: SizedBox(
-                      height: 30,
-                      child: ElevatedButton(
-                        onPressed: onClaim,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: isLost ? Colors.red : Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          textStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                    child: InkWell(
+                      onTap: onClaim,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isLost ? Colors.red : Colors.green,
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(isLost ? 'Remove' : 'Mark Claimed'),
+                        child: Text(isLost ? 'REMOVE' : 'CLAIMED', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
                     ),
                   ),
