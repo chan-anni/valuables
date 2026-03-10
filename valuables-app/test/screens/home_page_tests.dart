@@ -6,7 +6,7 @@ void main() {
   group('HomePage Widget Tests', () {
     Widget createTestWidget() {
       return MaterialApp(
-        home: HomePage(onBrowsePressed: () {}),
+        home: HomePage(onBrowsePressed: (item) {}),
         routes: {
           '/account': (context) =>
               const Scaffold(body: Center(child: Text('Account Page'))),
