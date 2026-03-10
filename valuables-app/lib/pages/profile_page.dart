@@ -10,6 +10,7 @@ import 'package:valuables/screens/home_page.dart';
 
 import 'package:get_it/get_it.dart';
 import 'package:valuables/auth/auth_service.dart';
+import 'package:valuables/screens/map_page.dart';
 
 final _supabase = Supabase.instance.client;
 
@@ -125,53 +126,37 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   }
 
   Future<void> _loadUserData() async {
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId == null) return;
+  final userId = _supabase.auth.currentUser?.id;
+  if (userId == null) return;
 
-    // Load user items
-    try {
-      final items = await _supabase
-          .from('items')
-          .select()
-          .eq('user_id', userId)
-          .neq('status', 'claimed')
-          .order('created_at', ascending: false);
-      
-      if (mounted) {
-        setState(() {
-          _userItems = items;
-        });
-      }
-    } catch (e) {
-      // Handle error
+  try {
+    // Fetch user listings
+    final items = await _supabase
+        .from('items')
+        .select()
+        .eq('user_id', userId)
+        .neq('status', 'claimed')
+        .order('created_at', ascending: false);
+
+    // Fetch notifications from the specific notifications table
+    final notificationData = await _supabase
+        .from('notifications')
+        .select()
+        .eq('user_id', userId)
+        .eq('is_read', false) // Only show active matches
+        .order('created_at', ascending: false)
+        .limit(20);
+
+    if (mounted) {
+      setState(() {
+        _userItems = items;
+        _alertItems = notificationData;
+      });
     }
-
-    // Load alerts
-    try {
-      List alerts = [];
-      try {
-        final alertData = await _supabase
-            .from('alerts')
-            .select('*, item:items(*)')
-            .eq('user_id', userId)
-            .order('created_at', ascending: false)
-            .limit(20);
-        for (var a in alertData) {
-          if (a['item'] != null) alerts.add(a['item']);
-        }
-      } catch (_) {
-        // Fallback
-      }
-
-      if (mounted) {
-        setState(() {
-          _alertItems = alerts;
-        });
-      }
-    } catch (e) {
-      // Handle error
-    }
+  } catch (e) {
+    debugPrint('Error loading profile data: $e');
   }
+}
 
   Future<void> _onClaimItem(dynamic item) async {
     final itemId = item['id'].toString();
@@ -205,6 +190,55 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
         }
       }
     }
+  }
+
+  Future<void> _dismissNotification(int index) async {
+    final notifId = _alertItems[index]['id'];
+    try {
+      await _supabase
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notifId);
+
+      if (!mounted) return;
+      setState(() {
+        _alertItems.removeAt(index);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _viewAlertItem(int index) async {
+    final notif = _alertItems[index];
+    final data = notif['data'] as Map<String, dynamic>? ?? {};
+    
+    // Extract data needed for MapPage
+    final foundItemId = data['found_item_id'];
+    final lat = (data['found_lat'] as num?)?.toDouble();
+    final lng = (data['found_lng'] as num?)?.toDouble();
+
+    if (foundItemId == null || lat == null || lng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item location data is missing.')),
+      );
+      return;
+    }
+
+    // Navigate to MapPage using your existing notification parameters
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapPage(
+          notifItemLat: lat,
+          notifItemLng: lng,
+          notifItemId: foundItemId.toString(),
+          fromNotification: true, // This ensures the back button shows up
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImage() async {
@@ -479,7 +513,6 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
@@ -509,7 +542,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
             // Alerts Section (Moved below listings)
             if (!_isEditing) ...[
               Text(
-                'Potential Matches',
+                'Alerts',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
               ),
               const SizedBox(height: 8),
@@ -531,25 +564,19 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                 )
               else
                 ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _alertItems.length,
-                  itemBuilder: (context, index) {
-                    final item = _alertItems[index];
-                    return _NotificationCard(
-                      item: item, 
-                      onDismiss: () {
-                        setState(() {
-                          _alertItems.removeAt(index);
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Notification moved to history')),
-                        );
-                      }
-                    );
-                  },
-                ),
-              const SizedBox(height: 24),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _alertItems.length,
+                itemBuilder: (context, index) {
+                  final notif = _alertItems[index];
+                  return _NotificationCard(
+                    title: notif['title'] ?? 'Potential Match',
+                    body: notif['body'] ?? 'An item was found near your location.',
+                    onDismiss: () => _dismissNotification(index),
+                    onClaim: () => _viewAlertItem(index),
+                  );
+                },
+              ),
             ],
           ],
         ),
@@ -558,56 +585,110 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
   }
 }
 
-class _NotificationCard extends StatelessWidget {
-  final dynamic item;
-  final VoidCallback onDismiss;
 
-  const _NotificationCard({required this.item, required this.onDismiss});
+class _NotificationCard extends StatelessWidget {
+  final String title;
+  final String body;
+  final VoidCallback onDismiss;
+  final VoidCallback onClaim;
+
+  const _NotificationCard({
+    required this.title,
+    required this.body,
+    required this.onDismiss,
+    required this.onClaim,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final secondaryColor = theme.colorScheme.secondary;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
-      padding: const EdgeInsets.all(12.0),
+      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border(
-          left: BorderSide(
-            color: Theme.of(context).colorScheme.secondary,
-            width: 4,
+        color: isDark ? theme.cardColor : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.notifications_active, size: 16, color: Theme.of(context).colorScheme.secondary),
-              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: secondaryColor.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.announcement_rounded, size: 18, color: secondaryColor),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item['title'] ?? 'Item Found',
+                      title,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 14,
+                        letterSpacing: -0.2,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
-                      '${item['category'] ?? 'Unknown'} • ${item['item_type']?.toUpperCase() ?? 'UNKNOWN'}',
-                      style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      body,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        height: 1.3,
+                      ),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const SizedBox(width: 14),
+          Row(
+            children: [
+              // Main Action
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onClaim,
+                  icon: const Icon(Icons.map_outlined, size: 16),
+                  label: const Text('View on Map'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: secondaryColor,
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Secondary Action
               IconButton(
-                icon: const Icon(Icons.close, size: 16, color: Colors.grey),
                 onPressed: onDismiss,
-                tooltip: 'Dismiss',
+                icon: const Icon(Icons.close, size: 22),
+                style: IconButton.styleFrom(
+                  backgroundColor: isDark ? const Color.fromARGB(255, 58, 58, 58) : Colors.grey[100],
+                  foregroundColor: Colors.grey,
+                ),
               ),
             ],
           ),
