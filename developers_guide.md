@@ -51,9 +51,13 @@ valuables/
 │
 ├── valuables-app/           # Root of the Flutter project
 │   ├── lib/                 # MAIN SOURCE CODE
-│   │    ├── screens/        # UI: Maps, Forms, Lists
-│   │    ├── models/         # Data logic & Supabase structures
+│   │    ├── screens/        # Forms, maps, things that pop up from buttons
+│   │    ├── pages/          # Maps, Profile, navigation pages
+|   |    ├── notifs/
+|   |    ├── claims/
+|   |    ├── chat/
 │   │    └── main.dart       # App entry point
+|   |
 │   ├── test/                # TEST SUITE (Mirrors 'lib' structure)
 │   │    ├── screens/        # Widget tests for UI components
 │   │    └── unit/           # Logic and helper tests
@@ -81,7 +85,7 @@ GOOGLE_SERVER_CLIENT_ID=server_client_id
 #### Creating your own API keys:
 - [Google Cloud Console - Maps](https://console.cloud.google.com/google/maps-apis/credentials)(If you don't have a project on Google Cloud Console, initialize one first and then use the link to navigate to the panel)
 	- *GOOGLE_MAP_KEY*:
-		- Create an API key with no App restriction (for the purpose of testing on multiple platform)
+		- Create an API key with no App restriction (for the purpose of testing on multiple platforms)
 		- Include the following 3 APIs in the selection:
 			1. Maps SDK for Android (or iOS, depending on your platform)
 			2. Places API
@@ -97,7 +101,7 @@ GOOGLE_SERVER_CLIENT_ID=server_client_id
 	- *SUPABASE_ANON_KEY*:
 		- Get the *SUPABASE_ANON_KEY* in Project Settings -> API Keys -> Publishable key and paste into **.env**
 #### Android
-Add inside <application> in android/app/src/main/AndroidManifest.xml (you may have to make this file). Make sure the file has "${GOOGLE_MAP_KEY}" field. The build.gradle.kts will replace it automatically with the .env file's value.
+The Android Manifest should be able to be built with Gradle. However, if it does not, add it inside <application> in android/app/src/main/AndroidManifest.xml (you may need to create this file). Make sure the file has "${GOOGLE_MAP_KEY}" field. The build.gradle.kts will replace it automatically with the .env file's value.
 
 ```xml
 
@@ -143,7 +147,7 @@ Add inside <application> in android/app/src/main/AndroidManifest.xml (you may ha
 ```
 
 ### iOS
-Add ios/Runner/AppDelegate.swift (you may have to make this file). Replace the API key where it says "Google Maps API Key here":
+You will need to add ios/Runner/AppDelegate.swift (you may have to make this file). Refer to the repository map to where you should place it. Replace the API key where it says "Google Maps API Key here":
 ```swift
 
 import UIKit
@@ -267,6 +271,7 @@ Tests requiring Supabase interaction may require a valid .env file or will use m
 
 - Finally, run 'flutter test --coverage' to generate a code coverage report. Use it with [Flutter Coverage](https://marketplace.visualstudio.com/items?itemName=Flutterando.flutter-coverage) to see the result of the test.
 
+
 ## Release Procedures
 Update Versioning: Increment the version and build number in pubspec.yaml (e.g., version: 1.0.1+2) and tag the release as well in git. Update the README with the latest release and link to the release note if any.
 
@@ -274,6 +279,11 @@ Documentation: Ensure any new features are updated in the user-facing documentat
 
 Formatting: Run the following to ensure the code is formatted properly and readable:
 ```flutter format <you file path here>```
+Also, while not fully necessary, run the following to check if all tests pass before committing. This helps make it easier to know if a commit breaks before pushing:
+```
+dart analyze
+flutter test
+```
 
 ## Continuous Integration (CI)
 We use GitHub Actions to automate the validation of every pull request and push to the main and developing branches.
