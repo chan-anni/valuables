@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/theme_controller.dart';
+import 'map_page.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onBrowsePressed;
@@ -67,9 +68,12 @@ class _HomePageState extends State<HomePage> {
       final data = await query.order('created_at', ascending: false).limit(50);
 
       // Filter to only unclaimed items and sort by upload time (newest first)
+      // Only showing found items as requested
       List<dynamic> unclaimedItems = data
-          .where((item) => item['status'] != 'claimed' && item['status'] != 'found')
-          .toList();
+          .where((item) {
+            final type = (item['type'] ?? item['item_type'] ?? '').toString().toLowerCase();
+            return type == 'found' && item['status'] != 'claimed';
+          }).toList();
       
       unclaimedItems.sort((a, b) {
         final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -163,8 +167,9 @@ class _HomePageState extends State<HomePage> {
 class ItemCard extends StatelessWidget {
   final dynamic item;
   final VoidCallback? onClaim;
+  final bool showViewDetails;
 
-  const ItemCard({super.key, required this.item, this.onClaim});
+  const ItemCard({super.key, required this.item, this.onClaim, this.showViewDetails = true});
 
   @override
   Widget build(BuildContext context) {
@@ -178,7 +183,7 @@ class ItemCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     final typeColor = isLost ? primaryColor : (isFound ? secondaryColor : Colors.grey);
-    final typeBgColor = typeColor.withValues(alpha: 0.1);
+    final typeBgColor = typeColor.withOpacity(0.1);
     
     // Calculate expiration (dummy logic: 30 days from creation)
     String expirationText = 'Expires soon';
@@ -210,11 +215,6 @@ class ItemCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(item['description'] ?? 'No description provided.'),
                 const SizedBox(height: 16),
-                if (expirationDate != null)
-                  Text(
-                    'Expires on: ${expirationDate.year}-${expirationDate.month}-${expirationDate.day}',
-                    style: TextStyle(color: Colors.red.shade300, fontStyle: FontStyle.italic),
-                  ),
               ],
             ),
             actions: [
@@ -227,6 +227,24 @@ class ItemCard extends StatelessWidget {
                   },
                   child: Text(isLost ? 'Remove' : 'Claimed'),
                 ),
+              if (showViewDetails)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  final lat = (item['location_lat'] as num?)?.toDouble();
+                  final lng = (item['location_lng'] as num?)?.toDouble();
+                  final itemId = item['id']?.toString();
+                  if (lat != null && lng != null && itemId != null) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MapPage(notifItemLat: lat, notifItemLng: lng, notifItemId: itemId, fromNotification: true),
+                      ),
+                    );
+                  }
+                },
+                child: const Text('View Full Details'),
+              ),
             ],
           ),
         );
@@ -240,7 +258,7 @@ class ItemCard extends StatelessWidget {
           border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: Colors.black.withOpacity(0.03),
               blurRadius: 3,
               offset: const Offset(0, 4),
             ),

@@ -15,7 +15,6 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _unclaimedLostItems = [];
   List<dynamic> _unclaimedFoundItems = [];
   // List<dynamic> _oldAlerts = [];
-  String _searchQuery = '';
   bool _isLoading = true;
   String? _historyError;
 
@@ -101,16 +100,6 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  List<dynamic> _filterItems(List<dynamic> items) {
-    return items.where((item) {
-      if (item == null) return false;
-      final title = (item['title'] ?? '').toString().toLowerCase();
-      final category = (item['category'] ?? '').toString().toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return title.contains(query) || category.contains(query);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -154,22 +143,12 @@ class _HistoryPageState extends State<HistoryPage> {
                           ],
                         ),
                       ),
-                    TextField(
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search your items...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                     // Active Items (Combined)
                     _buildHistorySection(
                       title: 'Active Items',
                       icon: Icons.access_time,
                       color: Colors.grey,
-                      items: _filterItems([..._unclaimedLostItems, ..._unclaimedFoundItems]),
+                      items: [..._unclaimedLostItems, ..._unclaimedFoundItems],
                     ),
                     const SizedBox(height: 24),
                     // Claimed Lost Items Section
@@ -177,7 +156,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       title: 'Past Lost Items',
                       icon: Icons.help_outline,
                       color: primaryColor,
-                      items: _filterItems(_claimedLostItems),
+                      items: _claimedLostItems,
                     ),
                     const SizedBox(height: 24),
                     // Claimed Found Items Section
@@ -185,7 +164,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       title: 'Past Found Items',
                       icon: Icons.location_on,
                       color: secondaryColor,
-                      items: _filterItems(_claimedFoundItems),
+                      items: _claimedFoundItems,
                     ),
                     // const SizedBox(height: 24),
                     // // Old Alerts Section
@@ -193,7 +172,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     //   title: 'Past Match Alerts',
                     //   icon: Icons.notifications,
                     //   color: Colors.grey,
-                    //   items: _filterItems(_oldAlerts),
+                    //   items: _oldAlerts,
                     // ),
                   ],
                 ),
@@ -208,31 +187,28 @@ class _HistoryPageState extends State<HistoryPage> {
     required Color color,
     required List<dynamic> items,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ExpansionTile(
+      initiallyExpanded: false,
+      tilePadding: EdgeInsets.zero,
+      shape: const Border(),
+      collapsedShape: const Border(),
+      title: Row(
+        children: [
+          Icon(icon, size: 24, color: color),
+          const SizedBox(width: 8),
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text('${items.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+          ),
+        ],
+      ),
       children: [
-        Row(
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text('${items.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
         if (items.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
@@ -282,7 +258,7 @@ class _HistoryPageState extends State<HistoryPage> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
+              color: isLost ? primaryColor.withOpacity(0.1) : secondaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: hasImage

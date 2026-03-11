@@ -369,7 +369,7 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: primaryColor.withValues(alpha: 0.2),
+                    backgroundColor: primaryColor.withOpacity(0.2),
                     backgroundImage: _imageFile != null
                         ? FileImage(_imageFile!)
                         : (user.userMetadata?['avatar_url'] != null
@@ -502,80 +502,93 @@ class _AccountInfoTabState extends State<_AccountInfoTab> {
             
             // My Listings Section
             if (!_isEditing) ...[
-              Text(
-                'My Active Listings',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
-              ),
-              const SizedBox(height: 8),
-              if (_userItems.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.format_list_bulleted_rounded, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
-                      SizedBox(height: 8),
-                      Text('No active listings', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
-                    ],
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _userItems.length,
-                  itemBuilder: (context, index) {
-                    final item = _userItems[index];
-                    return ItemCard(
-                      item: item,
-                      onClaim: () => _onClaimItem(item),
-                    );
-                  },
+              ExpansionTile(
+                title: Text(
+                  'My Active Listings (${_userItems.length})',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
                 ),
+                initiallyExpanded: false,
+                shape: const Border(),
+                collapsedShape: const Border(),
+                children: [
+                  if (_userItems.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.format_list_bulleted_rounded, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                          SizedBox(height: 8),
+                          Text('No active listings', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _userItems.length,
+                      itemBuilder: (context, index) {
+                        final item = _userItems[index];
+                        return ItemCard(
+                          item: item,
+                          onClaim: () => _onClaimItem(item),
+                      showViewDetails: false,
+                        );
+                      },
+                    ),
+                ],
+              ),
             ],
 
             const SizedBox(height: 32),
 
             // Alerts Section (Moved below listings)
             if (!_isEditing) ...[
-              Text(
-                'Potential Matches',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
-              ),
-              const SizedBox(height: 8),
-              if (_alertItems.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+              ExpansionTile(
+                title: Text(
+                  'Potential Matches (${_alertItems.length})',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black),
+                ),
+                initiallyExpanded: false,
+                shape: const Border(),
+                collapsedShape: const Border(),
+                children: [
+                  if (_alertItems.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(Icons.notifications_none, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
+                          SizedBox(height: 8),
+                          Text('No potential matches', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _alertItems.length,
+                    itemBuilder: (context, index) {
+                      final notif = _alertItems[index];
+                      return _NotificationCard(
+                        title: notif['title'] ?? 'Potential Match',
+                        body: notif['body'] ?? 'An item was found near your location.',
+                        onDismiss: () => _dismissNotification(index),
+                        onClaim: () => _viewAlertItem(index),
+                      );
+                    },
                   ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.notifications_none, size: 40, color: isDark ? Colors.grey[600] : Colors.grey),
-                      SizedBox(height: 8),
-                      Text('No potential matches', style: TextStyle(color: isDark ? Colors.grey[400] : Colors.black)),
-                    ],
-                  ),
-                )
-              else
-                ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _alertItems.length,
-                itemBuilder: (context, index) {
-                  final notif = _alertItems[index];
-                  return _NotificationCard(
-                    title: notif['title'] ?? 'Potential Match',
-                    body: notif['body'] ?? 'An item was found near your location.',
-                    onDismiss: () => _dismissNotification(index),
-                    onClaim: () => _viewAlertItem(index),
-                  );
-                },
+                ],
               ),
             ],
           ],
@@ -611,10 +624,10 @@ class _NotificationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? theme.cardColor : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
+            color: Colors.black.withOpacity(0.07),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -629,7 +642,7 @@ class _NotificationCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: secondaryColor.withValues(alpha: 0.1),
+                  color: secondaryColor.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.announcement_rounded, size: 18, color: secondaryColor),

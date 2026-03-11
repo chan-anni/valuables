@@ -110,6 +110,12 @@ class _MapPageState extends State<MapPage> {
       _allItems = List<Map<String, dynamic>>.from(data);
       if (widget.notifItemId != null) {
         _buildNotificationMarker();
+        final targetItem = _allItems.firstWhere((element) => element['id'].toString() == widget.notifItemId, orElse: () => {});
+        if (targetItem.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _showItemDetailsModal(targetItem);
+          });
+        }
       } else {
         _applyFilters();
       }
@@ -143,7 +149,7 @@ class _MapPageState extends State<MapPage> {
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
-  Marker _buildMarker(Map<String, dynamic> item, {bool isNotifItem = false}) {
+  void _showItemDetailsModal(Map<String, dynamic> item) {
     final rawDescription = item['description'];
     final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
         ? 'No description added'
@@ -151,6 +157,208 @@ class _MapPageState extends State<MapPage> {
     final itemType = (item['type'] as String?)?.toUpperCase() ?? 'UNKNOWN';
     final category = item['category'] as String? ?? 'Unknown';
     final createdAt = DateTime.tryParse(item['created_at'] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext sheetContext) {
+        final primary = Theme.of(sheetContext).colorScheme.primary;
+        final secondary = Theme.of(sheetContext).colorScheme.secondary;
+        final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+        final isLost = itemType == 'LOST';
+        final typeColor = isLost ? primary : secondary;
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (_, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  // Image
+                  (item['image_url'] != null && (item['image_url'] as String).isNotEmpty)
+                      ? GestureDetector(
+                          onTap: () {
+                            Navigator.push<void>(
+                              sheetContext,
+                              MaterialPageRoute(
+                                builder: (_) => Scaffold(
+                                  backgroundColor: Colors.black,
+                                  extendBodyBehindAppBar: true,
+                                  appBar: AppBar(
+                                    backgroundColor: Colors.transparent,
+                                    elevation: 0,
+                                    leading: IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                                      onPressed: () => Navigator.pop(sheetContext),
+                                    ),
+                                  ),
+                                  body: Center(
+                                    child: InteractiveViewer(
+                                      minScale: 1.0,
+                                      maxScale: 5.0,
+                                      child: Image.network(
+                                        item['image_url'],
+                                        width: double.infinity,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              item['image_url'],
+                              width: double.infinity,
+                              height: 180,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) =>
+                                  progress != null
+                                      ? const SizedBox(
+                                          height: 180,
+                                          child: Center(child: CircularProgressIndicator()),
+                                        )
+                                      : child,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          width: double.infinity,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
+                        ),
+                  const SizedBox(height: 12),
+                  // Type + Category badges
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: typeColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          itemType,
+                          style: TextStyle(
+                            color: typeColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[800] : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[300] : Colors.grey[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Title
+                  Text(
+                    item['title'],
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // Date
+                  if (createdAt != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(createdAt),
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  // Description
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                      height: 1.5,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 20),
+
+                  // "This is mine" claim button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      // Pass sheetContext so _openClaimSheet can pop the sheet correctly
+                      onPressed: () => _openClaimSheet(
+                        sheetContext: sheetContext,
+                        item: item,
+                      ),
+                      icon: const Icon(Icons.pan_tool_alt_outlined),
+                      label: const Text('This is mine'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Marker _buildMarker(Map<String, dynamic> item, {bool isNotifItem = false}) {
+    final category = item['category'] as String? ?? 'Unknown';
 
     return Marker(
       markerId: MarkerId(item['id'].toString()),
@@ -161,203 +369,7 @@ class _MapPageState extends State<MapPage> {
               _categoryHues[category] ?? BitmapDescriptor.hueRed,
             ),
       onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          builder: (BuildContext sheetContext) {
-            final primary = Theme.of(sheetContext).colorScheme.primary;
-            final secondary = Theme.of(sheetContext).colorScheme.secondary;
-            final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
-            final isLost = itemType == 'LOST';
-            final typeColor = isLost ? primary : secondary;
-
-            return DraggableScrollableSheet(
-              initialChildSize: 0.55,
-              minChildSize: 0.3,
-              maxChildSize: 0.85,
-              expand: false,
-              builder: (_, scrollController) => SingleChildScrollView(
-                controller: scrollController,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[400],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      // Image
-                      (item['image_url'] != null && (item['image_url'] as String).isNotEmpty)
-                          ? GestureDetector(
-                              onTap: () {
-                                Navigator.push<void>(
-                                  sheetContext,
-                                  MaterialPageRoute(
-                                    builder: (_) => Scaffold(
-                                      backgroundColor: Colors.black,
-                                      extendBodyBehindAppBar: true,
-                                      appBar: AppBar(
-                                        backgroundColor: Colors.transparent,
-                                        elevation: 0,
-                                        leading: IconButton(
-                                          icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                                          onPressed: () => Navigator.pop(sheetContext),
-                                        ),
-                                      ),
-                                      body: Center(
-                                        child: InteractiveViewer(
-                                          minScale: 1.0,
-                                          maxScale: 5.0,
-                                          child: Image.network(
-                                            item['image_url'],
-                                            width: double.infinity,
-                                            fit: BoxFit.contain,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  item['image_url'],
-                                  width: double.infinity,
-                                  height: 180,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, progress) =>
-                                      progress != null
-                                          ? const SizedBox(
-                                              height: 180,
-                                              child: Center(child: CircularProgressIndicator()),
-                                            )
-                                          : child,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              width: double.infinity,
-                              height: 180,
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.grey[800] : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
-                            ),
-                      const SizedBox(height: 12),
-                      // Type + Category badges
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: typeColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              itemType,
-                              style: TextStyle(
-                                color: typeColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.grey[800] : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Title
-                      Text(
-                        item['title'],
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      // Date
-                      if (createdAt != null) ...[
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatDate(createdAt),
-                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      // Description
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey[300] : Colors.grey[700],
-                          height: 1.5,
-                        ),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // "This is mine" claim button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          // Pass sheetContext so _openClaimSheet can pop the sheet correctly
-                          onPressed: () => _openClaimSheet(
-                            sheetContext: sheetContext,
-                            item: item,
-                          ),
-                          icon: const Icon(Icons.pan_tool_alt_outlined),
-                          label: const Text('This is mine'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
+        _showItemDetailsModal(item);
       },
     );
   }

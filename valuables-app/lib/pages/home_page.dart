@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'history_page.dart';
+import 'package:valuables/screens/map_page.dart';
 
 // Trivial comment to test the code coverage comments setup
 class HomePage extends StatefulWidget {

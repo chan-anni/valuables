@@ -316,8 +316,8 @@ class _NavigationState extends State<Navigation> {
         decoration: BoxDecoration(
           color: isSelected
               ? (isDark
-                    ? Colors.grey[800]
-                    : colorScheme.primary.withValues(alpha: 0.15))
+                    ? Colors.grey[800]!
+                    : colorScheme.primary.withOpacity(0.15))
               : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
