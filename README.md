@@ -48,22 +48,22 @@ valuables/
 ├── Status-Reports/ # Weekly progress updates
 |
 ├── valuables-app/ # Main Flutter application source code
-│ ├── android/ # Android-specific configuration
-| |
-│ ├── ios/ # iOS-specific configuration
-| |
-│ ├── lib/ # Main application logic (Dart code)
-| ├───── chat/ # Files related to chat and messaging feature
-| ├───── notifs/ # Files related to app notification handling
-| ├───── claims/ # Files related to the in-app claiming feature
-| ├───── screens/ # Individual screens (form, map, etc.--things that pop up from a button)
-| ├───── pages/ # The actual pages from navigation (profile, history, map, etc.)
-| |
-│ ├── test/ # Unit, widget, and integration tests
-| ├───── screens/ # Specific tests for individual screens (form screen, map, etc.)
-| |
-│ ├── pubspec.yaml # Project dependencies and settings
-| |
+│   ├── android/ # Android-specific configuration
+|   |
+│   ├── ios/ # iOS-specific configuration
+|   |
+│   ├── lib/ # Main application logic (Dart code)
+|   |   ├── chat/ # Files related to chat and messaging feature
+|   |   ├── notifs/ # Files related to app notification handling
+|   |   ├── claims/ # Files related to the in-app claiming feature
+|   |   ├── screens/ # Individual screens (form, map, etc.--things that pop up from a button)
+|   |   ├── pages/ # The actual pages from navigation (profile, history, map, etc.)
+|   |
+│   ├── test/ # Unit, widget, and integration tests
+|   |   ├── screens/ # Specific tests for individual screens (form screen, map, etc.)
+|   |
+│   ├── pubspec.yaml # Project dependencies and settings
+|   |
 └── README.md # Top-level project overview
 ```
 ## Contributing
