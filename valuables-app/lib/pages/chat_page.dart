@@ -251,11 +251,13 @@ class _ChatPageState extends State<ChatPage> {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       leading: CircleAvatar(
-        backgroundImage: NetworkImage(
-          roomImg ??
-              'https://zhurzsbvxcsaexcbqown.supabase.co/storage/v1/object/public/items/items/1771975266212.jpg',
-        ),
+        backgroundImage: roomImg != null
+                  ? NetworkImage(roomImg)
+                  : null,
         radius: 24,
+        child: roomImg == null
+          ? const Icon(Icons.image, size: 18)
+          : null,
       ),
       title: Text(
         roomName,
