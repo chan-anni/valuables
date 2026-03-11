@@ -8,8 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatRoom;
+  final String? otherUserId; // optional — passed when navigating from a claim
 
-  const ChatScreen({super.key, required this.chatRoom});
+  const ChatScreen({super.key, required this.chatRoom, this.otherUserId});
 
   @override
   ChatScreenState createState() => ChatScreenState();
@@ -22,9 +23,11 @@ class ChatScreenState extends State<ChatScreen> {
 
   Map<String, dynamic>? room;
   Map<String, dynamic>? user;
-  final _supabase = Supabase.instance.client; // Add this
+  String? _itemImageUrl;
+  String? _otherUsername;
+  final _supabase = Supabase.instance.client;
 
-  bool _isLoading = true; // Add a loading flag
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -42,19 +45,35 @@ class ChatScreenState extends State<ChatScreen> {
       return;
     }
 
-    // Load the chat history before updating the UI state
+    final itemData = fetchedRoom['items'] as Map<String, dynamic>?;
+
+    // Fetch the other person's username if their ID was passed in
+    if (widget.otherUserId != null) {
+      try {
+        final otherUser = await _supabase
+            .from('users')
+            .select('username')
+            .eq('id', widget.otherUserId!)
+            .single();
+        _otherUsername = otherUser['username'] as String?;
+      } catch (e) {
+        debugPrint('Could not fetch other user: $e');
+      }
+    }
+
     await _loadHistoricalMessages();
 
     setState(() {
       room = fetchedRoom;
       user = fetchedUser;
+      _itemImageUrl = itemData?['image_url'] as String?;
       _isLoading = false;
     });
 
     _chatClient.useRealtimeChat(
       roomId: widget.chatRoom,
       userId: user!['id'],
-      onMessageReceived: handleIncomingMessage,
+      onMessageReceived: _handleIncomingMessage,
     );
   }
 
@@ -64,7 +83,7 @@ class ChatScreenState extends State<ChatScreen> {
           .from('message')
           .select()
           .eq('chat_room_id', widget.chatRoom)
-          .order('created_at', ascending: true); // Chat UI loads bottom-up
+          .order('created_at', ascending: true);
 
       final List<dynamic> records = response as List<dynamic>;
 
@@ -79,56 +98,133 @@ class ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error loading history: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading history: $e')),
+        );
       }
     }
   }
 
   @override
   void dispose() {
-    _chatClient.disconnect(); // Clean up the Supabase subscription
+    _chatClient.disconnect();
     _chatController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show a loading spinner while fetching the user
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundImage: _itemImageUrl != null
+                  ? NetworkImage(_itemImageUrl!)
+                  : null,
+              child: _itemImageUrl == null
+                  ? const Icon(Icons.image, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    room?['name'] ?? 'Chat',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (_otherUsername != null)
+                    Text(
+                      'Chatting with: $_otherUsername',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.normal,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'delete') {
+                _confirmDelete(context, room!['id']);
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text(
+                      'Delete Conversation',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: Chat(
         chatController: _chatController,
-        currentUserId: user!['id'], // Bracket notation
-        onMessageSend: (text) => handleSend(text),
+        currentUserId: user!['id'],
+        onMessageSend: (text) => _handleSend(text),
         resolveUser: (chat_core.UserID id) async {
-          return chat_core.User(id: id, name: user!["id"]);
+          try {
+            final result = await _supabase
+                .from('users')
+                .select('id, username')
+                .eq('id', id)
+                .single();
+            return chat_core.User(
+              id: id,
+              name: result['username'] as String? ?? 'Unknown',
+            );
+          } catch (_) {
+            return chat_core.User(id: id, name: 'Unknown');
+          }
         },
       ),
     );
   }
 
-  void handleSend(String text) async {
+  void _handleSend(String text) async {
     if (text.trim().isEmpty) return;
 
     final newMessage = chat_core.TextMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      authorId: user!['id'], // Bracket notation
+      authorId: user!['id'],
       createdAt: DateTime.now().toUtc(),
       text: text,
     );
 
     _chatController.insertMessage(newMessage);
-
     await _chatClient.sendMessage(roomId: widget.chatRoom, text: text);
   }
 
-  void handleIncomingMessage(Map<String, dynamic> record) {
-    if (record['author_id'] == user!['id']) return; // Bracket notation
+  void _handleIncomingMessage(Map<String, dynamic> record) {
+    if (record['author_id'] == user!['id']) return;
 
     final incomingMessage = chat_core.TextMessage(
       id: record['id'].toString(),
@@ -140,5 +236,34 @@ class ChatScreenState extends State<ChatScreen> {
     setState(() {
       _chatController.insertMessage(incomingMessage);
     });
+  }
+
+  void _confirmDelete(BuildContext context, String roomId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Conversation?'),
+          content: const Text('Are you sure you want to delete this chat?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                await _chatService.deleteRoom(roomId: roomId);
+                if (mounted) {
+                  navigator.pop();
+                  navigator.pop();
+                }
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

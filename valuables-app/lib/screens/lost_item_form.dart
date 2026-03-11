@@ -24,17 +24,19 @@ class _LostItemFormState extends State<LostItemForm> {
   // Form controllers
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _currentLocationNameController = TextEditingController();
 
   // Form values
   String _selectedType = 'lost';
   String? _selectedCategory;
   File? _imageFile;
+  File? _imageFile2;
   String? _imageUrl;
   DateTime? _dateFound;
   DateTime? _dateLost;
   bool _isLoading = false;
   
-  // Location values
+  // Where the item was lost/found (map pin)
   double? _locationLat;
   double? _locationLng;
   String? _locationName;
@@ -54,16 +56,11 @@ class _LostItemFormState extends State<LostItemForm> {
   @override
   void initState() {
     super.initState();
-    // Initialize Supabase client - can be injected for testing
     _supabase = widget.supabaseClient;
     if (widget.forceType != null) {
       _selectedType = widget.forceType!;
     }
-    // Initialize Supabase client - can be injected for testing.
-    // If testMode is enabled, avoid falling back to the global client to
-    // keep widget tests isolated.
     _supabase = widget.supabaseClient ?? (widget.testMode ? null : Supabase.instance.client);
-
   }
 
   @override
@@ -73,6 +70,11 @@ class _LostItemFormState extends State<LostItemForm> {
     final isLost = _selectedType == 'lost';
     final themeColor = isLost ? primaryColor : secondaryColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? Colors.grey[800] : Colors.grey[200];
+
+    // Dynamic labels based on type
+    final mapLocationLabel = isLost ? 'Last Seen Location *' : 'Location Found *';
+    final mapLocationHint = isLost ? 'Tap to mark where it was last seen' : 'Tap to mark where you found it';
 
     return Scaffold(
       appBar: AppBar(
@@ -90,44 +92,41 @@ class _LostItemFormState extends State<LostItemForm> {
                 children: [
                   // Type selector
                   if (widget.forceType == null)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Item Type',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Item Type',
+                              style: TextStyle(fontSize: 16),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          SegmentedButton<String>(
-                            segments: const [
-                              ButtonSegment(
-                                value: 'lost',
-                                label: Text('Lost'),
-                                icon: Icon(Icons.help_outline),
-                              ),
-                              ButtonSegment(
-                                value: 'found',
-                                label: Text('Found'),
-                                icon: Icon(Icons.location_on),
-                              ),
-                            ],
-                            selected: {_selectedType},
-                            onSelectionChanged: (Set<String> newSelection) {
-                              setState(() {
-                                _selectedType = newSelection.first;
-                              });
-                            },
-                          ),
-                        ],
+                            const SizedBox(height: 12),
+                            SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: 'lost',
+                                  label: Text('Lost'),
+                                  icon: Icon(Icons.help_outline),
+                                ),
+                                ButtonSegment(
+                                  value: 'found',
+                                  label: Text('Found'),
+                                  icon: Icon(Icons.location_on),
+                                ),
+                              ],
+                              selected: {_selectedType},
+                              onSelectionChanged: (Set<String> newSelection) {
+                                setState(() {
+                                  _selectedType = newSelection.first;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   if (widget.forceType != null)
                     Container(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -153,12 +152,10 @@ class _LostItemFormState extends State<LostItemForm> {
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.title),
                       filled: true,
-                      fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                      fillColor: cardColor,
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a title';
-                      }
+                      if (value == null || value.isEmpty) return 'Please enter a title';
                       return null;
                     },
                   ),
@@ -172,24 +169,15 @@ class _LostItemFormState extends State<LostItemForm> {
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.category),
                       filled: true,
-                      fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                      fillColor: cardColor,
                     ),
                     initialValue: _selectedCategory,
                     items: _categories.map((category) {
-                      return DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      );
+                      return DropdownMenuItem(value: category, child: Text(category));
                     }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCategory = value;
-                      });
-                    },
+                    onChanged: (value) => setState(() => _selectedCategory = value),
                     validator: (value) {
-                      if (value == null) {
-                        return 'Please select a category';
-                      }
+                      if (value == null) return 'Please select a category';
                       return null;
                     },
                   ),
@@ -206,29 +194,42 @@ class _LostItemFormState extends State<LostItemForm> {
                       prefixIcon: const Icon(Icons.description),
                       alignLabelWithHint: true,
                       filled: true,
-                      fillColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                      fillColor: cardColor,
                     ),
                     maxLines: 5,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a description';
-                      }
+                      if (value == null || value.isEmpty) return 'Please enter a description';
                       return null;
                     },
                   ),
-                  
+                  const SizedBox(height: 16),
+
+                  !isLost?// Current Item Location (optional, text only)
+                  TextFormField(
+                    controller: _currentLocationNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Current Item Location - Optional',
+                      hintText: 'e.g., University Lost and Found, Room 204',
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.store_mall_directory),
+                      filled: true,
+                      fillColor: cardColor,
+                    ),
+                  )
+                  : const SizedBox.shrink(),
+
                   const SizedBox(height: 16),
                   
                   // Date picker
                   Card(
-                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    color: cardColor,
                     child: ListTile(
                       leading: const Icon(Icons.calendar_today),
-                      title: Text(_selectedType == 'lost' ? 'Date Lost *' : 'Date Found *'),
+                      title: Text(isLost ? 'Date Lost *' : 'Date Found *'),
                       subtitle: Text(
                         _dateLost != null || _dateFound != null
                             ? DateFormat('MMMM dd, yyyy').format(
-                                _selectedType == 'lost' ? _dateLost! : _dateFound!)
+                                isLost ? _dateLost! : _dateFound!)
                             : 'Tap to select date',
                       ),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -238,15 +239,13 @@ class _LostItemFormState extends State<LostItemForm> {
                   
                   const SizedBox(height: 16),
                   
-                  // Location picker
+                  // Map location picker — identical style to other cards
                   Card(
-                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    color: cardColor,
                     child: ListTile(
                       leading: const Icon(Icons.location_on),
-                      title: const Text('Location'),
-                      subtitle: Text(
-                        _locationName ?? 'Tap to select on map',
-                      ),
+                      title: Text(mapLocationLabel),
+                      subtitle: Text(_locationName ?? mapLocationHint),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                       onTap: _pickLocation,
                     ),
@@ -254,19 +253,19 @@ class _LostItemFormState extends State<LostItemForm> {
                   
                   const SizedBox(height: 16),
                   
-                  // Image upload
+                  // Photo 1 — required for Found, optional for Lost
                   Card(
-                    color: isDark ? Colors.grey[800] : Colors.grey[200],
+                    color: cardColor,
                     child: Column(
                       children: [
                         ListTile(
                           leading: const Icon(Icons.camera_alt),
-                          title: const Text('Add Photo'),
-                          subtitle: Text(_imageFile != null 
-                              ? 'Photo selected' 
-                              : 'Optional'),
+                          title: Text(isLost ? 'Photo 1' : 'Photo 1 *'),
+                          subtitle: Text(_imageFile != null
+                              ? 'Photo selected'
+                              : isLost ? 'Optional - tap to add' : 'Required - tap to add'),
                           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: _pickImage,
+                          onTap: () => _pickImage(slot: 1),
                         ),
                         if (_imageFile != null) ...[
                           const Divider(),
@@ -288,14 +287,11 @@ class _LostItemFormState extends State<LostItemForm> {
                                   right: 8,
                                   child: IconButton(
                                     icon: const Icon(Icons.close, color: Colors.white),
-                                    onPressed: () {
-                                      setState(() {
-                                        _imageFile = null;
-                                      });
-                                    },
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: Colors.black54,
-                                    ),
+                                    onPressed: () => setState(() {
+                                      _imageFile = null;
+                                      _imageFile2 = null;
+                                    }),
+                                    style: IconButton.styleFrom(backgroundColor: Colors.black54),
                                   ),
                                 ),
                               ],
@@ -305,6 +301,55 @@ class _LostItemFormState extends State<LostItemForm> {
                       ],
                     ),
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // Photo 2 — optional, only for Found, only shown after Photo 1 is set
+                  if (!isLost && _imageFile != null)
+                    Card(
+                      color: cardColor,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.add_a_photo),
+                            title: const Text('Photo 2'),
+                            subtitle: Text(_imageFile2 != null
+                                ? 'Photo selected'
+                                : 'Optional - tap to add'),
+                            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () => _pickImage(slot: 2),
+                          ),
+                          if (_imageFile2 != null) ...[
+                            const Divider(),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      _imageFile2!,
+                                      height: 200,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 8,
+                                    right: 8,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.white),
+                                      onPressed: () => setState(() => _imageFile2 = null),
+                                      style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   
                   const SizedBox(height: 32),
                   
@@ -346,30 +391,28 @@ class _LostItemFormState extends State<LostItemForm> {
   }
 
   Future<void> _pickLocation() async {
-  final result = await Navigator.push<MapPickerResult>(
-    context,
-    MaterialPageRoute(
-      builder: (context) => MapPickerScreen(
-        initialLat: _locationLat,
-        initialLng: _locationLng,
+    final result = await Navigator.push<MapPickerResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MapPickerScreen(
+          initialLat: _locationLat,
+          initialLng: _locationLng,
+        ),
       ),
-    ),
-  );
+    );
 
-  if (result != null) {
-    setState(() {
-      _locationLat = result.lat;
-      _locationLng = result.lng;
-      _locationName = result.locationName;
-    });
+    if (result != null) {
+      setState(() {
+        _locationLat = result.lat;
+        _locationLng = result.lng;
+        _locationName = result.locationName;
+      });
+    }
   }
-}
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage({required int slot}) async {
     final picker = ImagePicker();
-    // NOTE: Ensure NSCameraUsageDescription and NSPhotoLibraryUsageDescription are in Info.plist
-    
-    // Show options: Camera or Gallery
+
     final source = await showDialog<ImageSource>(
       context: context,
       builder: (context) => AlertDialog(
@@ -405,7 +448,11 @@ class _LostItemFormState extends State<LostItemForm> {
       if (pickedFile != null) {
         if (!mounted) return;
         setState(() {
-          _imageFile = File(pickedFile.path);
+          if (slot == 1) {
+            _imageFile = File(pickedFile.path);
+          } else {
+            _imageFile2 = File(pickedFile.path);
+          }
         });
       }
     } on PlatformException catch (e) {
@@ -416,9 +463,7 @@ class _LostItemFormState extends State<LostItemForm> {
         } else if (e.code == 'source_not_available') {
           message = 'Camera not available on this device/simulator.';
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
     } catch (e) {
       if (mounted) {
@@ -429,27 +474,19 @@ class _LostItemFormState extends State<LostItemForm> {
     }
   }
 
-  Future<String?> _uploadImage() async {
+  Future<String?> _uploadImage(File imageFile, String fileName) async {
     if (_supabase == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error connecting to database'),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text('Error connecting to database'), backgroundColor: Colors.red),
       );
+      return null;
     }
     
     try {
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final path = 'items/$fileName';
-      
-      await _supabase!.storage.from('items').upload(path, _imageFile!);
-      
-      final imageUrl = _supabase!.storage.from('items').getPublicUrl(path);
-      
-      return imageUrl;
+      await _supabase!.storage.from('items').upload(path, imageFile);
+      return _supabase!.storage.from('items').getPublicUrl(path);
     } catch (e) {
-      // return a snackbar error message instead of returning null
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -463,27 +500,48 @@ class _LostItemFormState extends State<LostItemForm> {
   }
 
   Future<void> _submitForm() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
     
     // Check date
     if ((_selectedType == 'lost' && _dateLost == null) ||
         (_selectedType == 'found' && _dateFound == null)) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Please select a date')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a date')),
+        );
+      }
+      return;
+    }
+
+    // Enforce map location required
+    if (_locationLat == null || _locationLng == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _selectedType == 'lost'
+                  ? 'Please mark where the item was last seen'
+                  : 'Please mark where you found the item',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    // Photo 1 required only for Found items
+    if (_selectedType == 'found' && _imageFile == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please add at least one photo for found items')),
+        );
       }
       return;
     }
     
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     
     try {
-      // Skip Supabase operations if no client is provided (testing mode)
       if (_supabase == null) {
         if (mounted) {
           Navigator.pop(context);
@@ -499,32 +557,43 @@ class _LostItemFormState extends State<LostItemForm> {
       }
       
       final user = _supabase!.auth.currentUser;
-      
-      // For now, use a test user ID if no user is logged in
-      // TODO: Implement proper authentication
       final userId = user?.id;
-      
-      // Upload image if selected
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+      // Upload Photo 1 if provided
       if (_imageFile != null) {
-        _imageUrl = await _uploadImage();
+        _imageUrl = await _uploadImage(_imageFile!, '$timestamp-1.jpg');
       }
-      
+
+      // Upload Photo 2 if provided — stored as pipe-separated value in image_url
+      // since the schema has a single image_url column
+      String? imageUrl2;
+      if (_imageFile2 != null) {
+        imageUrl2 = await _uploadImage(_imageFile2!, '$timestamp-2.jpg');
+      }
+
+      final currentLocationName = _currentLocationNameController.text.trim();
+
       final data = {
         'user_id': userId,
         'type': _selectedType,
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'category': _selectedCategory,
+        // Where it was lost/found
         'location_lat': _locationLat,
         'location_lng': _locationLng,
         'location_name': _locationName,
-        'image_url': _imageUrl,
-        'date_lost': _selectedType == 'lost'
-            ? _dateLost?.toIso8601String()
-            : null,
-        'date_found': _selectedType == 'found'
-            ? _dateFound?.toIso8601String()
-            : null,
+        // Where the item currently is
+        'current_location_name': currentLocationName.isEmpty ? null : currentLocationName,
+        'current_location_lat': null,
+        'current_location_lng': null,
+        // Photo 1 URL; Photo 2 appended with | separator if present
+        'image_url': imageUrl2 != null
+            ? '${_imageUrl ?? ''}|$imageUrl2'
+            : _imageUrl,
+        'date_lost': _selectedType == 'lost' ? _dateLost?.toIso8601String() : null,
+        'date_found': _selectedType == 'found' ? _dateFound?.toIso8601String() : null,
         'status': 'active',
       };
 
@@ -543,18 +612,11 @@ class _LostItemFormState extends State<LostItemForm> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -562,6 +624,7 @@ class _LostItemFormState extends State<LostItemForm> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _currentLocationNameController.dispose();
     super.dispose();
   }
 }

@@ -14,8 +14,6 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _claimedFoundItems = [];
   List<dynamic> _unclaimedLostItems = [];
   List<dynamic> _unclaimedFoundItems = [];
-  List<dynamic> _oldAlerts = [];
-  String _searchQuery = '';
   bool _isLoading = true;
   String? _historyError;
 
@@ -34,16 +32,16 @@ class _HistoryPageState extends State<HistoryPage> {
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'lost')
+            .eq('type', 'lost')
             .eq('status', 'claimed')
             .order('created_at', ascending: false);
-        
+
         // Load claimed found items
         final claimedFound = await _supabase
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'found')
+            .eq('type', 'found')
             .eq('status', 'claimed')
             .order('created_at', ascending: false);
 
@@ -52,42 +50,42 @@ class _HistoryPageState extends State<HistoryPage> {
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'lost')
+            .eq('type', 'lost')
             .neq('status', 'claimed')
             .order('created_at', ascending: false);
-        
+
         // Load unclaimed found items
         final unclaimedFound = await _supabase
             .from('items')
             .select()
             .eq('user_id', userId)
-            .eq('item_type', 'found')
+            .eq('type', 'found')
             .neq('status', 'claimed')
             .order('created_at', ascending: false);
 
-        // Load old alerts
-        List<dynamic> oldAlerts = [];
-        try {
-          final alerts = await _supabase
-              .from('alerts')
-              .select('*, item:items(*)')
-              .eq('user_id', userId)
-              .order('created_at', ascending: false)
-              .limit(50);
-          for (var a in alerts) {
-            if (a['item'] != null) oldAlerts.add(a['item']);
-          }
-        } catch (e) {
-          // Fallback if alerts table structure is different
-          oldAlerts = [];
-        }
+        // // Load old alerts
+        // List<dynamic> oldAlerts = [];
+        // try {
+        //   final alerts = await _supabase
+        //       .from('alerts')
+        //       .select('*, item:items(*)')
+        //       .eq('user_id', userId)
+        //       .order('created_at', ascending: false)
+        //       .limit(50);
+        //   for (var a in alerts) {
+        //     if (a['item'] != null) oldAlerts.add(a['item']);
+        //   }
+        // } catch (e) {
+        //   // Fallback if alerts table structure is different
+        //   oldAlerts = [];
+        // }
 
         setState(() {
           _claimedLostItems = claimedLost;
           _claimedFoundItems = claimedFound;
           _unclaimedLostItems = unclaimedLost;
           _unclaimedFoundItems = unclaimedFound;
-          _oldAlerts = oldAlerts;
+          // _oldAlerts = oldAlerts;
           _isLoading = false;
         });
       } else {
@@ -101,23 +99,12 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  List<dynamic> _filterItems(List<dynamic> items) {
-    return items.where((item) {
-      final title = (item['title'] ?? '').toString().toLowerCase();
-      final category = (item['category'] ?? '').toString().toLowerCase();
-      final query = _searchQuery.toLowerCase();
-      return title.contains(query) || category.contains(query);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final secondaryColor = Theme.of(context).colorScheme.secondary;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity & History'),
-      ),
+      appBar: AppBar(title: const Text('Activity & History')),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -129,7 +116,10 @@ class _HistoryPageState extends State<HistoryPage> {
                     if (_historyError != null)
                       Container(
                         margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.shade50,
                           border: Border.all(color: Colors.red.shade200),
@@ -146,29 +136,25 @@ class _HistoryPageState extends State<HistoryPage> {
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close, size: 20, color: Colors.red),
-                              onPressed: () => setState(() => _historyError = null),
+                              icon: const Icon(
+                                Icons.close,
+                                size: 20,
+                                color: Colors.red,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _historyError = null),
                               padding: EdgeInsets.zero,
                             ),
                           ],
                         ),
                       ),
-                    TextField(
-                      onChanged: (value) => setState(() => _searchQuery = value),
-                      decoration: InputDecoration(
-                        hintText: 'Search your items...',
-                        prefixIcon: const Icon(Icons.search),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                     // Active Items (Combined)
                     _buildHistorySection(
                       title: 'Active Items',
                       icon: Icons.access_time,
                       color: Colors.grey,
-                      items: _filterItems([..._unclaimedLostItems, ..._unclaimedFoundItems]),
+                      items: [..._unclaimedLostItems, ..._unclaimedFoundItems],
+                      initiallyExpanded: false,
                     ),
                     const SizedBox(height: 24),
                     // Claimed Lost Items Section
@@ -176,7 +162,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       title: 'Past Lost Items',
                       icon: Icons.help_outline,
                       color: primaryColor,
-                      items: _filterItems(_claimedLostItems),
+                      items: _claimedLostItems,
                     ),
                     const SizedBox(height: 24),
                     // Claimed Found Items Section
@@ -184,21 +170,14 @@ class _HistoryPageState extends State<HistoryPage> {
                       title: 'Past Found Items',
                       icon: Icons.location_on,
                       color: secondaryColor,
-                      items: _filterItems(_claimedFoundItems),
+                      items: _claimedFoundItems,
                     ),
                     const SizedBox(height: 24),
-                    // Old Alerts Section
-                    _buildHistorySection(
-                      title: 'Past Match Alerts',
-                      icon: Icons.notifications,
-                      color: Colors.grey,
-                      items: _filterItems(_oldAlerts),
-                    ),
                   ],
                 ),
               ),
             ),
-          );
+    );
   }
 
   Widget _buildHistorySection({
@@ -206,43 +185,60 @@ class _HistoryPageState extends State<HistoryPage> {
     required IconData icon,
     required Color color,
     required List<dynamic> items,
+    bool initiallyExpanded = false,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 24, color: color),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ExpansionTile(
+      initiallyExpanded: initiallyExpanded,
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.only(bottom: 12),
+      shape: const Border(),
+      collapsedShape: const Border(),
+      title: Row(
+        children: [
+          Icon(icon, size: 24, color: color),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black,
             ),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${items.length}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: color,
               ),
-              child: Text('${items.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
+          ),
+        ],
+      ),
+      children: [
         if (items.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
+            width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.grey.shade100,
+              color: isDark ? const Color(0xFF252525) : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
               child: Text(
                 'No items in this category',
-                style: TextStyle(color: Colors.grey.shade600),
+                style: TextStyle(
+                  color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                ),
               ),
             ),
           )
@@ -258,9 +254,11 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   Widget _buildHistoryItem(dynamic item) {
-    final itemType = item['item_type']?.toString().toUpperCase() ?? 'UNKNOWN';
+    if (item == null) return const SizedBox.shrink();
+    final itemType = item['type']?.toString().toUpperCase() ?? 'UNKNOWN';
     final isLost = itemType == 'LOST';
-    final hasImage = item['image_url'] != null && item['image_url'].toString().isNotEmpty;
+    final hasImage =
+        item['image_url'] != null && item['image_url'].toString().isNotEmpty;
     final status = item['status']?.toString() ?? 'unknown';
     final primaryColor = Theme.of(context).colorScheme.primary;
     final secondaryColor = Theme.of(context).colorScheme.secondary;
@@ -272,7 +270,9 @@ class _HistoryPageState extends State<HistoryPage> {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF252525) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.transparent : Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.transparent : Colors.grey.shade200,
+        ),
       ),
       child: Row(
         children: [
@@ -280,7 +280,9 @@ class _HistoryPageState extends State<HistoryPage> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: isLost ? primaryColor.withValues(alpha: 0.1) : secondaryColor.withValues(alpha: 0.1),
+              color: isLost
+                  ? primaryColor.withValues(alpha: 0.1)
+                  : secondaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: hasImage
@@ -309,35 +311,57 @@ class _HistoryPageState extends State<HistoryPage> {
               children: [
                 Text(
                   item['title'] ?? 'Untitled',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
                   item['category'] ?? 'Uncategorized',
-                  style: TextStyle(fontSize: 12, color: isDark ? Colors.grey[400] : Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.grey[400] : Colors.grey.shade600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
                     Text(
                       _formatDate(item['created_at']),
-                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: status == 'claimed' ? Colors.grey.shade300 : Colors.red.shade100,
+                        color: status == 'claimed'
+                            ? Colors.grey.shade300
+                            : (status == 'active'
+                                  ? Colors.green.shade100
+                                  : Colors.red.shade100),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        status.toUpperCase(),
+                        (isLost && status == 'claimed')
+                            ? 'REMOVED'
+                            : status.toUpperCase(),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: status == 'claimed' ? Colors.grey.shade700 : Colors.red.shade700,
+                          color: status == 'claimed'
+                              ? Colors.grey.shade700
+                              : (status == 'active'
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade700),
                         ),
                       ),
                     ),

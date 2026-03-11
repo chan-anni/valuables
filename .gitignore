@@ -107,6 +107,10 @@ unlinked_spec.ds
 **/linux/flutter/generated_plugin_registrant.cc
 **/linux/flutter/generated_plugin_registrant.h
 **/linux/flutter/generated_plugins.cmake
+# Linux (Flutter desktop generated)
+linux/flutter/ephemeral/
+**/linux/flutter/ephemeral/
+**/.plugin_symlinks/
 
 # Coverage
 coverage/

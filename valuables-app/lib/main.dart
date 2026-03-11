@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/home_page.dart';
@@ -10,15 +9,21 @@ import 'package:valuables/auth/auth_service.dart';
 import 'package:valuables/chat/chat_client.dart';
 import 'package:valuables/chat/chat_service.dart';
 import 'package:valuables/pages/chat_page.dart';
-import 'package:valuables/screens/chat_screen.dart';
 import 'package:get_it/get_it.dart';
 import 'package:valuables/screens/lost_item_form.dart';
 import 'package:valuables/theme_controller.dart';
+import 'screens/map_page.dart';
+import "package:google_sign_in/google_sign_in.dart";
+import 'app_config.dart';
+import 'package:valuables/notifs/local_notifs.dart';
+import 'package:valuables/notifs/match_service.dart';
+import 'package:valuables/notifs/notif_handler.dart';
+
 // Theme controller is provided by theme_controller.dart
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await setupNotifications();
   // Load .env and initialize Supabase in the background (non-blocking).
   unawaited(_initializeAsync());
   setupLocator();
@@ -42,6 +47,7 @@ Future<void> _initializeAsync() async {
   try {
     debugPrint('_initializeAsync: loading .env');
     await dotenv.load(fileName: '.env');
+    AppConfig.placesApiKey = dotenv.env['GOOGLE_MAP_KEY']!;
     debugPrint('_initializeAsync: .env loaded');
   } catch (e) {
     debugPrint('_initializeAsync: dotenv.load failed: $e');
@@ -50,7 +56,7 @@ Future<void> _initializeAsync() async {
   try {
     final googleClientId = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
     if (googleClientId != null) {
-      // await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
+       await GoogleSignIn.instance.initialize(serverClientId: googleClientId);
     }
   } catch (e) {
     debugPrint('_initializeAsync: GoogleSignIn init failed: $e');
@@ -129,6 +135,7 @@ class MyApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: mode,
@@ -152,26 +159,70 @@ class Navigation extends StatefulWidget {
 
 class _NavigationState extends State<Navigation> {
   int currentPageIndex = 0;
+  dynamic _itemToFocusOnMap;
 
-  void setPageIndex(int index) {
-    setState(() {
-      currentPageIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+    supabaseInitializedNotifier.addListener(_onSupabaseReady); // Check if Supabase is ready before setting up auth listener
+    _onSupabaseReady(); // Calls the Auth Listener setup inside of it, so no need to double call
   }
 
-  // pages left->right: Map, Listings, (center FAB), Messages, Account
-  late final List<Widget> pages = [
-    const MapPage(),
-    const HomePage(),
-    const SizedBox.shrink(), // placeholder for center FAB
-    const ChatPage(),
-    const ProfilePage(),
-  ];
+  void _onSupabaseReady() {
+    if (supabaseInitializedNotifier.value) {
+      _setupAuthListener();
+      supabaseInitializedNotifier.removeListener(_onSupabaseReady);
+    }
+  }
+  
+  void _setupAuthListener() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      // Covers both sign in and app start with existing session
+      if (data.event == AuthChangeEvent.signedIn ||
+          data.event == AuthChangeEvent.initialSession) {
+        if (data.session != null) {  // Extra check to ensure session is valid
+          MatchService.listenForMatches();
+        }
+      } else if (data.event == AuthChangeEvent.signedOut) {  // Match service doesn't work without a user session, so dispose on sign out
+        MatchService.dispose();
+      }
+    });
+
+    // Handle case where Supabase was already initialized before listener was set up.
+    // This allows us to start listening for matches immediatly if the session is still valid from prev app run
+    if (Supabase.instance.client.auth.currentUser != null) {
+      debugPrint('User already logged in, starting listener immediately');
+      MatchService.listenForMatches();
+    }
+  }
+
+  @override
+  void dispose() {
+    supabaseInitializedNotifier.removeListener(_onSupabaseReady);
+    MatchService.dispose();
+    super.dispose();
+  }
+
+  void setPageIndex(int index, {dynamic item}) {
+    setState(() {
+      currentPageIndex = index;
+      _itemToFocusOnMap = item;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // pages left->right: Map, Listings, (center FAB -- allows us to make form), Messages, Account
+    final List<Widget> pages = [
+      MapPage(itemToFocus: _itemToFocusOnMap),
+      HomePage(onBrowsePressed: (item) => setPageIndex(0, item: item)),
+      const SizedBox.shrink(), // placeholder for center FAB
+      const ChatPage(),
+      const ProfilePage(),
+    ];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Valuables')),
@@ -453,231 +504,13 @@ class _NavigationState extends State<Navigation> {
   }
 }
 
-class MapPage extends StatefulWidget {
-  const MapPage({super.key});
 
-  @override
-  State<MapPage> createState() => _MapPageState();
-}
 
-// Map page -- needs API key
-class _MapPageState extends State<MapPage> {
-  final Completer<GoogleMapController> _controller =
-      Completer<GoogleMapController>();
-  Future<void>? _addMarkersFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _addMarkersFuture = _addMarkers();
-    supabaseInitializedNotifier.addListener(_onSupabaseInitialized);
-  }
-
-  @override
-  void dispose() {
-    supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
-    super.dispose();
-  }
-
-  void _onSupabaseInitialized() {
-    if (supabaseInitializedNotifier.value) {
-      setState(() {
-        _addMarkersFuture = _addMarkers();
-      });
-    }
-  }
-
-  static const CameraPosition startPos = CameraPosition(
-    target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746,
-  );
-
-  final Set<Marker> _markers = <Marker>{};
-
-  Future<void> _addMarkers() async {
-    if (!supabaseInitializedNotifier.value) return;
-
-    try {
-      final data = await Supabase.instance.client.from('items').select();
-
-      for (var item in data) {
-        if (item['id'] == null ||
-            item['location_lat'] == null ||
-            item['location_lng'] == null ||
-            item['title'] == null) {
-          continue;
-        }
-
-        final rawDescription = item['description'];
-        final description =
-            (rawDescription == null || rawDescription.toString().trim().isEmpty)
-            ? 'No description added'
-            : rawDescription.toString();
-
-        Marker newMarker = Marker(
-          markerId: MarkerId(item['id'].toString()),
-          position: LatLng(item['location_lat'], item['location_lng']),
-          onTap: () {
-            showModalBottomSheet(
-              context: context,
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              builder: (BuildContext context) {
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            item['title'],
-                            style: DefaultTextStyle.of(
-                              context,
-                            ).style.apply(fontSizeFactor: 1.6),
-                            textAlign: TextAlign.left,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            tooltip: 'Close',
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ),
-                    (item['image_url'] != null &&
-                            (item['image_url'] as String).isNotEmpty)
-                        ? Image.network(
-                            item['image_url'],
-                            height: 200,
-                            width: 200,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress != null) {
-                                return SizedBox(
-                                  height: 200,
-                                  width: 200,
-                                  child: CircularProgressIndicator(),
-                                );
-                              } else {
-                                return child;
-                              }
-                            },
-                          )
-                        : Container(
-                            height: 200,
-                            width: 200,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported),
-                          ),
-                    Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Text(
-                        description,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () => {startClaim(item['id'])},
-                      icon: const Icon(Icons.add),
-                      label: const Text('Submit Claim'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-        _markers.add(newMarker);
-      }
-    } catch (e) {
-      debugPrint('Error loading markers: $e');
-    }
-  }
+class MessagePage extends StatelessWidget {
+  const MessagePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: FutureBuilder(
-        future: _addMarkersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            ); // Show loading spinner while markers load
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            ); // Display error if marker loading fails
-          } else {
-            return GoogleMap(
-              initialCameraPosition: startPos,
-              markers: _markers,
-              onMapCreated: (GoogleMapController controller) {
-                _controller.complete(controller);
-                if (!_controller.isCompleted) {
-                  _controller.complete(controller);
-                }
-              },
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  Future<void> startClaim(String itemId) async {
-    final chatService = GetIt.I<ChatService>();
-    final authService = GetIt.I<AuthService>();
-    final supabase = Supabase.instance.client;
-
-    try {
-      // 1. Get the current user (The "Claimer")
-      final currentUser = authService.getCurrentUserSession()?.user;
-      if (currentUser == null) return;
-
-      // 2. Fetch the Item Holder's ID (The "Owner")
-      // We use .single() because we only expect one owner per item
-      final itemData = await supabase
-          .from("items")
-          .select("user_id")
-          .eq('id', itemId)
-          .single();
-
-      final String ownerId = itemData['user_id'];
-
-      // 3. Create the Room and get the new Room ID
-      // Note: I updated ChatService to return the room ID earlier
-      final room = await chatService.createRoom("Claim for Item $itemId");
-      if (room == null) return;
-
-      final String roomId = room['id'];
-
-      // 4. Add both users to the room
-      // Assuming your addUsersToRoom now accepts a List of IDs or Users
-      await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
-
-      // 5. Navigate to the chat
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute<void>(
-            builder: (context) => ChatScreen(chatRoom: roomId),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint("Failed to start claim: $e");
-      // Show an error snackbar here if you like
-    }
+    return const Center(child: Text('Messages'));
   }
 }

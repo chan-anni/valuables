@@ -1,28 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'dart:async';
+import 'package:google_places_api_flutter/google_places_api_flutter.dart' as places;
+import 'package:valuables/app_config.dart';
 
 class MapPickerResult {
   final double lat;
   final double lng;
-  final String? locationName;
+  final String locationName;
 
-  MapPickerResult({required this.lat, required this.lng, this.locationName});
+  MapPickerResult({
+    required this.lat,
+    required this.lng,
+    required this.locationName,
+  });
 }
 
+// This screen allows users to pick a location on the map, either by
+// tapping, searching, or using their current location. It returns the
+// selected coordinates and a human-readable name back to the caller.
 class MapPickerScreen extends StatefulWidget {
   final double? initialLat;
   final double? initialLng;
   
   // Test hooks: allow injecting initial search results and location name cache
-  // final List<Location>? initialSearchResults;
+  final List<Location>? initialSearchResults;
   final Map<String, String>? initialLocationNames;
 
   const MapPickerScreen({
     super.key,
     this.initialLat,
     this.initialLng,
-    // this.initialSearchResults,
+    this.initialSearchResults,
     this.initialLocationNames,
   });
 
@@ -30,95 +41,184 @@ class MapPickerScreen extends StatefulWidget {
   State<MapPickerScreen> createState() => _MapPickerScreenState();
 }
 
+// The state class manages the map controller, search functionality, 
+// and location picking logic. It updates the UI based on the user 
+// interactions and performs geocoding operations to convert between 
+// coordinates and human-readable addresses.
 class _MapPickerScreenState extends State<MapPickerScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
+  GoogleMapController? _mapController;
+  final _searchController = TextEditingController();
+
+  // Setup the necessary state variables to track the picked location,
+  // its name, loading states, and search results.
   LatLng? _pickedLocation;
-  
-  static const CameraPosition _kDefaultCenter = CameraPosition(
-    target: LatLng(47.65428653800135, -122.30802267054545),
-    zoom: 14.4746,
-  );
-  // String _locationName = 'Tap on the map to select a location';
-  // bool _isLoadingLocation = false;
-  // bool _isSearching = false;
-  // List<Location> _searchResults = [];
+  String _locationName = 'Tap on the map to select a location';
+  bool _isLoadingLocation = false;
   final Map<String, String> _locationNames = {}; // Cache for location names
-  // Timer? _debounceTimer;
+  Timer? _debounceTimer;
 
 
 
-  // static const LatLng _defaultLocation = LatLng(
-  //   47.6062,
-  //   -122.3321,
-  // ); // Default to Seattle if no initial location is provided
+  static const LatLng _defaultLocation = LatLng(
+    47.6062,
+    -122.3321,
+  ); // Default to Seattle if no initial location is provided
 
+  // This will allow us to initialize map with specific location coordinates if passed
   @override
   void initState() {
     super.initState();
     if (widget.initialLat != null && widget.initialLng != null) {
       _pickedLocation = LatLng(widget.initialLat!, widget.initialLng!);
     }
-    // If tests injected initial search results or names, wire them into state
-    // if (widget.initialSearchResults != null) {
-    //   _searchResults = widget.initialSearchResults!;
-    // }
+    // If tests injected initial names, wire them into state
     if (widget.initialLocationNames != null) {
       _locationNames.addAll(widget.initialLocationNames!);
     }
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    _controller.complete(controller);
+  // Dispose of controllers to prevent memory leaks when
+  // the widget is removed from the widget tree.
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _mapController?.dispose();
+    super.dispose();
+    _debounceTimer?.cancel();
   }
 
-  void _onTap(LatLng position) {
-    setState(() {
-      _pickedLocation = position;
-    });
-  }
+  // Deals with fetching the user's current location, checking 
+  // permissions, and updating the map and picked location.
+  Future<void> _goToCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
 
-  void _confirmLocation() {
-    if (_pickedLocation != null) {
-      Navigator.pop(
-        context,
-        MapPickerResult(
-          lat: _pickedLocation!.latitude,
-          lng: _pickedLocation!.longitude,
-          locationName: '${_pickedLocation!.latitude.toStringAsFixed(4)}, ${_pickedLocation!.longitude.toStringAsFixed(4)}',
-        ),
-      );
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Location permission denied. Please change it in settings to use this feature.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition();
+      final latLng = LatLng(position.latitude, position.longitude);
+
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
+
+      await _updatePickedLocation(latLng);
+    } catch (e) {
+
+      // error catching for any issues during location fetching, such as timeouts or service errors
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not get location: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
 
+  // Updates the picked location based on user interaction and performs reverse geocoding
+  // to get a human-readable address. If reverse geocoding fails, it shows the coordinates 
+  // as location name.
+  Future<void> _updatePickedLocation(LatLng latLng) async {
+    setState(() {
+      _pickedLocation = latLng;
+      _locationName =
+          '${latLng.latitude.toStringAsFixed(5)}, ${latLng.longitude.toStringAsFixed(5)}';
+    });
+
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        latLng.latitude,
+        latLng.longitude,
+      );
+
+      if (placemarks.isNotEmpty && mounted) {
+        final place = placemarks.first;
+        final parts = [
+          place.name,
+          place.locality,
+          place.administrativeArea,
+          place.country,
+        ].where((part) => part != null && part.isNotEmpty).toList();
+
+        setState(() {
+          _locationName = parts.join(', ');
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error could not get address: ${e.toString()}'),
+          ),
+        );
+      }
+      // Keep coordinate fallback name if reverse geocoding fails
+    }
+  }
+
+  // If user confirms the location chosen we return the latitude, longitude and location
+  // to user. If no location is picked we return a snackbar message saying no location is chosen
+  // and to choose one.
+  void _confirmLocation() {
+    if (_pickedLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a location first')),
+      );
+      return;
+    }
+
+    // Take us to the prev screen and pass back the picked location data
+    Navigator.pop(
+      context,
+      MapPickerResult(
+        lat: _pickedLocation!.latitude,
+        lng: _pickedLocation!.longitude,
+        locationName: _locationName,
+      ),
+    );
+  }
+
+  // Constructing basic UI for the map picker screen. Includes the Google Maps widget,
+  // a search bar with results dropdown, a button to go to current location,
+  // and a bottom panel to confirm the selected location.
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = Theme.of(context).colorScheme.primary;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pick Location', style: TextStyle(color: isDark ? Colors.white : Colors.black)),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        title: const Text(
+          'Pick Location',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
-        actions: [
-          if (_pickedLocation != null)
-            IconButton(
-              icon: const Icon(Icons.check),
-              onPressed: _confirmLocation,
-              color: primaryColor,
-            ),
-        ],
       ),
       body: Stack(
         children: [
+          // Map
           GoogleMap(
-            padding: _pickedLocation != null ? const EdgeInsets.only(bottom: 100) : EdgeInsets.zero,
-            initialCameraPosition: _pickedLocation != null
-                ? CameraPosition(target: _pickedLocation!, zoom: 15)
-                : _kDefaultCenter,
-            onMapCreated: _onMapCreated,
-            onTap: _onTap,
+            initialCameraPosition: CameraPosition(
+              target: _pickedLocation ?? _defaultLocation,
+              zoom: _pickedLocation != null ? 15 : 12,
+            ),
+            onMapCreated: (controller) => _mapController = controller,
+            onTap: _updatePickedLocation,
             markers: _pickedLocation != null
                 ? {
                     Marker(
@@ -127,27 +227,166 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
                     ),
                   }
                 : {},
-            myLocationEnabled: false,
             myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
           ),
-          if (_pickedLocation != null)
-            Positioned(
-              bottom: 30,
-              left: 20,
-              right: 20,
-              child: ElevatedButton(
-                onPressed: _confirmLocation,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+
+          // Search bar + results
+          Positioned(
+            top: 12,
+            left: 12,
+            right: 12,
+            child: places.PlaceSearchField(
+              apiKey: AppConfig.placesApiKey,
+              isLatLongRequired: true,
+              debounceDuration: const Duration(milliseconds: 400),
+              hideOnEmpty: true,
+              hideOnSelect: true,
+              constraints: const BoxConstraints(maxHeight: 200),
+
+              builder: (context, controller, focusNode) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(8),
+                  child: ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (_, _, _) {
+                      return TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        decoration: InputDecoration(
+                          hintText: 'Search for a location...',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: controller.text.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: controller.clear,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      );
+                    },
                   ),
+                );
+              },
+
+              decorationBuilder: (context, child) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: child,
+                  ),
+                );
+              },
+
+              itemSeparatorBuilder: (_, _) => const Divider(height: 1),
+
+              itemBuilder: (context, prediction) => ListTile(
+                leading: Icon(
+                  Icons.location_on,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                child: const Text('Confirm Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                title: Text(
+                  prediction.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+
+              onPlaceSelected: (prediction, details) async {
+                final loc = details?.result.geometry?.location;
+                if (loc == null) return;
+
+                final latLng = LatLng(loc.lat, loc.lng);
+
+                FocusScope.of(context).unfocus();
+
+                // Move the map, set marker, and set name
+                _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 15));
+                setState(() {
+                  _pickedLocation = latLng;
+                  _locationName = prediction.description;
+                });
+              },
+            ),
+          ),
+
+          // Current location button
+          Positioned(
+            right: 12,
+            bottom: 100,
+            child: FloatingActionButton.small(
+              heroTag: 'my_location',
+              backgroundColor: Colors.white,
+              onPressed: _isLoadingLocation ? null : _goToCurrentLocation,
+              child: _isLoadingLocation
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(Icons.my_location, color: Theme.of(context).colorScheme.primary),
+            ),
+          ),
+
+          // Bottom confirm panel
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(blurRadius: 8, color: Colors.black26)],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _locationName,
+                          style: const TextStyle(fontSize: 14),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _pickedLocation != null
+                          ? _confirmLocation
+                          : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text(
+                        'Confirm Location',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );
