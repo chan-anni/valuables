@@ -14,7 +14,7 @@ class _HistoryPageState extends State<HistoryPage> {
   List<dynamic> _claimedFoundItems = [];
   List<dynamic> _unclaimedLostItems = [];
   List<dynamic> _unclaimedFoundItems = [];
-  List<dynamic> _oldAlerts = [];
+  final List<dynamic> _oldAlerts = [];
   bool _isLoading = true;
   String? _historyError;
 

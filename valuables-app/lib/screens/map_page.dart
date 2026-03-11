@@ -314,21 +314,6 @@ class _MapPageState extends State<MapPage> {
                           style: TextStyle(
                             fontSize: 12,
                             color: isDark ? Colors.grey[300] : Colors.grey[700],
-                      const SizedBox(height: 20),
-                      // Submit Claim button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => startClaim(item['id'].toString()),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Submit Claim'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
                           ),
                         ),
                       ),
@@ -373,13 +358,7 @@ class _MapPageState extends State<MapPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LostItemForm()),
-                        );
-                      },
+                      onPressed: () => startClaim(item['id'].toString()),
                       icon: const Icon(Icons.add),
                       label: const Text('Submit Claim'),
                       style: ElevatedButton.styleFrom(
