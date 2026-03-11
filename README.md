@@ -1,7 +1,7 @@
 # Valuables
-Valuables is a location-based lost and found platform designed to connect item owners with finders through an intuitive visual map interface. By anchoring discovery to specific locations, Valuables makes it easier to report found items, search for lost belongings, and coordinate safe item returns.
+Valuables is a location-based lost-and-found platform designed to connect item owners with finders through an intuitive visual map interface. By anchoring discovery to specific locations, Valuables makes it easier to report found items, search for lost belongings, and coordinate safe item returns.
 ## Current Version
-Last Release:
+Last Release: 1.0.0
 ## Project Goals
 - **Simplify the lost and found process:** Streamline the finding process by having everything in one place, ready to check in your hand.
 - **Visual Discovery:** Replace text and image-heavy lists with an easy-to-use map-based interface, allowing users to instantly see what has been found in their vicinity.
@@ -23,7 +23,8 @@ User can easily filter the items on the map based on time and category of the it
 ### Match Notification
 If the owner post a lost item report and someone else finds the item and made a found item post in the same area, the owner will receive a match notification for them to check if it is their item.
 
-> [!NOTE] Original Plan for Final Release
+> [!note]
+> Original Plan for Final Release
 > **Major features:**
 > - [x] P0: Display lost items on the map with a pin and a dedicated page with traditional cards
 > - [x] P0: Ability to report something as lost through a form 
@@ -43,15 +44,26 @@ Developer's note: our main code lies in the 'developing' branch, while code for 
 ```text
 valuables/
 ├── .github/workflows # CI workflow
+|
 ├── Status-Reports/ # Weekly progress updates
+|
 ├── valuables-app/ # Main Flutter application source code
 │ ├── android/ # Android-specific configuration
+| |
 │ ├── ios/ # iOS-specific configuration
+| |
 │ ├── lib/ # Main application logic (Dart code)
-| | ├── screens/ # Individual screens (form, map, etc.)
+| ├───── chat/ # Files related to chat and messaging feature
+| ├───── notifs/ # Files related to app notification handling
+| ├───── claims/ # Files related to the in-app claiming feature
+| ├───── screens/ # Individual screens (form, map, etc.--things that pop up from a button)
+| ├───── pages/ # The actual pages from navigation (profile, history, map, etc.)
+| |
 │ ├── test/ # Unit, widget, and integration tests
-| | ├── screens/ # Specific tests for individual screens (form screen, map, etc.)
+| ├───── screens/ # Specific tests for individual screens (form screen, map, etc.)
+| |
 │ ├── pubspec.yaml # Project dependencies and settings
+| |
 └── README.md # Top-level project overview
 ```
 ## Contributing
@@ -59,5 +71,5 @@ Please refer to our developer's guidelines for information about how to contribu
 ## User's Manual
 For information about how to use the app, please take a look at our user manual here: [User Manual](user_manual.md)
 # AI Usage
-- We use CoPilot for reviewing the Pull Requests, which are only approved upon human agreement with CoPilot's suggestions;
-- And Cursor, Gemini, Claude for boiler plate code generation (E.g. making example widget code)
+- We use CoPilot for reviewing the Pull Requests, which are only approved upon human agreement with CoPilot's suggestions
+- We also used Cursor, Gemini, and Claude for boilerplate code generation (e.g., making example widget code)
