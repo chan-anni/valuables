@@ -66,7 +66,30 @@ class _ChatPageState extends State<ChatPage> {
         .inFilter('id', roomIds)
         .order('created_at', referencedTable: 'message', ascending: false);
 
-    return List<Map<String, dynamic>>.from(response);
+    // Sort rooms by the timestamp of their latest message (newest → oldest).
+    final rooms = List<Map<String, dynamic>>.from(response);
+
+    DateTime lastMessageTime(Map<String, dynamic> room) {
+      final messages = room['message'] as List<dynamic>? ?? [];
+      if (messages.isEmpty) {
+        // Put rooms with no messages at the bottom.
+        return DateTime.fromMillisecondsSinceEpoch(0);
+      }
+
+      final first = messages.first;
+      if (first is Map<String, dynamic>) {
+        final raw = first['created_at']?.toString();
+        if (raw != null) {
+          return DateTime.tryParse(raw) ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+        }
+      }
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+
+    rooms.sort((a, b) => lastMessageTime(b).compareTo(lastMessageTime(a)));
+
+    return rooms;
   }
 
   Future<void> _refreshRooms() async {
