@@ -10,12 +10,13 @@ import 'package:valuables/theme_controller.dart';
 
 
 class MapPage extends StatefulWidget {
+  final dynamic itemToFocus;
   final double? notifItemLat;    
   final double? notifItemLng;     
   final String? notifItemId; 
   final bool fromNotification;
 
-  const MapPage({super.key, this.notifItemLat, this.notifItemLng, this.notifItemId, this.fromNotification = false}); 
+  const MapPage({super.key, this.itemToFocus, this.notifItemLat, this.notifItemLng, this.notifItemId, this.fromNotification = false});
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -76,12 +77,29 @@ class _MapPageState extends State<MapPage> {
         }
       });
     }
+    if (widget.itemToFocus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _goToItemLocation(widget.itemToFocus);
+        _showItemDetailsModal(widget.itemToFocus);
+      });
+    }
   }
 
   @override
   void dispose() {
     supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant MapPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.itemToFocus != null && widget.itemToFocus != oldWidget.itemToFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _goToItemLocation(widget.itemToFocus);
+        _showItemDetailsModal(widget.itemToFocus);
+      });
+    }
   }
 
   void _onSupabaseInitialized() {
@@ -144,13 +162,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   Marker _buildMarker(Map<String, dynamic> item, {bool isNotifItem = false}) {
-    final rawDescription = item['description'];
-    final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
-        ? 'No description added'
-        : rawDescription.toString();
-    final itemType = (item['type'] as String?)?.toUpperCase() ?? 'UNKNOWN';
     final category = item['category'] as String? ?? 'Unknown';
-    final createdAt = DateTime.tryParse(item['created_at'] ?? '');
 
     return Marker(
       markerId: MarkerId(item['id'].toString()),
@@ -161,210 +173,217 @@ class _MapPageState extends State<MapPage> {
               _categoryHues[category] ?? BitmapDescriptor.hueRed,
             ),
       onTap: () {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          isScrollControlled: true,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          builder: (BuildContext sheetContext) {
-            final primary = Theme.of(sheetContext).colorScheme.primary;
-            final secondary = Theme.of(sheetContext).colorScheme.secondary;
-            final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
-            final isLost = itemType == 'LOST';
-            final typeColor = isLost ? primary : secondary;
+        _showItemDetailsModal(item);
+      },
+    );
+  }
 
-            return DraggableScrollableSheet(
-              initialChildSize: 0.55,
-              minChildSize: 0.3,
-              maxChildSize: 0.85,
-              expand: false,
-              builder: (_, scrollController) => SingleChildScrollView(
-                controller: scrollController,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag handle
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[400],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
+  void _showItemDetailsModal(dynamic item) {
+    final rawDescription = item['description'];
+    final description = (rawDescription == null || rawDescription.toString().trim().isEmpty)
+        ? 'No description added'
+        : rawDescription.toString();
+    final itemType = (item['type'] as String?)?.toUpperCase() ?? 'UNKNOWN';
+    final category = item['category'] as String? ?? 'Unknown';
+    final createdAt = DateTime.tryParse(item['created_at'] ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        final primary = Theme.of(context).colorScheme.primary;
+        final secondary = Theme.of(context).colorScheme.secondary;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final isLost = itemType == 'LOST';
+        final typeColor = isLost ? primary : secondary;
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.3,
+          maxChildSize: 0.85,
+          expand: false,
+          builder: (_, scrollController) => SingleChildScrollView(
+            controller: scrollController,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                      // Image
-                      (item['image_url'] != null && (item['image_url'] as String).isNotEmpty)
-                          ? GestureDetector(
-                              onTap: () {
-                                Navigator.push<void>(
-                                  sheetContext,
-                                  MaterialPageRoute(
-                                    builder: (_) => Scaffold(
-                                      backgroundColor: Colors.black,
-                                      extendBodyBehindAppBar: true,
-                                      appBar: AppBar(
-                                        backgroundColor: Colors.transparent,
-                                        elevation: 0,
-                                        leading: IconButton(
-                                          icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                                          onPressed: () => Navigator.pop(sheetContext),
-                                        ),
-                                      ),
-                                      body: Center(
-                                        child: InteractiveViewer(
-                                          minScale: 1.0,
-                                          maxScale: 5.0,
-                                          child: Image.network(
-                                            item['image_url'],
-                                            width: double.infinity,
-                                            fit: BoxFit.contain,
-                                          ),
-                                        ),
+                    ),
+                  ),
+                  // Image
+                  (item['image_url'] != null && (item['image_url'] as String).isNotEmpty)
+                      ? GestureDetector(
+                          onTap: () {
+                            Navigator.push<void>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => Scaffold(
+                                  backgroundColor: Colors.black,
+                                  extendBodyBehindAppBar: true,
+                                  appBar: AppBar(
+                                    backgroundColor: Colors.transparent,
+                                    elevation: 0,
+                                    leading: IconButton(
+                                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                  ),
+                                  body: Center(
+                                    child: InteractiveViewer(
+                                      minScale: 1.0,
+                                      maxScale: 5.0,
+                                      child: Image.network(
+                                        item['image_url'],
+                                        width: double.infinity,
+                                        fit: BoxFit.contain,
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  item['image_url'],
-                                  width: double.infinity,
-                                  height: 180,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, progress) =>
-                                      progress != null
-                                          ? const SizedBox(
-                                              height: 180,
-                                              child: Center(child: CircularProgressIndicator()),
-                                            )
-                                          : child,
                                 ),
                               ),
-                            )
-                          : Container(
+                            );
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              item['image_url'],
                               width: double.infinity,
                               height: 180,
-                              decoration: BoxDecoration(
-                                color: isDark ? Colors.grey[800] : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
-                            ),
-                      const SizedBox(height: 12),
-                      // Type + Category badges
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: typeColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              itemType,
-                              style: TextStyle(
-                                color: typeColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, progress) =>
+                                  progress != null
+                                      ? const SizedBox(
+                                          height: 180,
+                                          child: Center(child: CircularProgressIndicator()),
+                                        )
+                                      : child,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.grey[800] : Colors.grey[200],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              category,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                              ),
-                            ),
+                        )
+                      : Container(
+                          width: double.infinity,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.grey[800] : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Title
-                      Text(
-                        item['title'],
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      // Date
-                      if (createdAt != null) ...[
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                            const SizedBox(width: 4),
-                            Text(
-                              _formatDate(createdAt),
-                              style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                            ),
-                          ],
+                          child: const Icon(Icons.image_not_supported, size: 48, color: Colors.grey),
                         ),
-                      ],
-                      const SizedBox(height: 12),
-                      // Description
-                      Text(
-                        description,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.grey[300] : Colors.grey[700],
-                          height: 1.5,
+                  const SizedBox(height: 12),
+                  // Type + Category badges
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: typeColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        maxLines: 4,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // "This is mine" claim button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          // Pass sheetContext so _openClaimSheet can pop the sheet correctly
-                          onPressed: () => _openClaimSheet(
-                            sheetContext: sheetContext,
-                            item: item,
+                        child: Text(
+                          itemType,
+                          style: TextStyle(
+                            color: typeColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
-                          icon: const Icon(Icons.pan_tool_alt_outlined),
-                          label: const Text('This is mine'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.grey[800] : Colors.grey[200],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          category,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.grey[300] : Colors.grey[700],
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  // Title
+                  Text(
+                    item['title'],
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  // Date
+                  if (createdAt != null) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          _formatDate(createdAt),
+                          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  // Description
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.grey[300] : Colors.grey[700],
+                      height: 1.5,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 20),
+                  // "This is mine" claim button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _openClaimSheet(
+                        sheetContext: context,
+                        item: item,
+                      ),
+                      icon: const Icon(Icons.pan_tool_alt_outlined),
+                      label: const Text('This is mine'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
   }
 
-  /// Opens the ClaimSheet bottom sheet.
-  /// [sheetContext] is the item detail sheet's own context — used to pop it first.
-  /// [context] (the MapPage context) is used to open the new claim sheet.
   void _openClaimSheet({
     required BuildContext sheetContext,
     required Map<String, dynamic> item,
@@ -392,10 +411,8 @@ class _MapPageState extends State<MapPage> {
       return;
     }
 
-    // Pop the item detail sheet using its own context
     Navigator.pop(sheetContext);
 
-    // Open the claim sheet using MapPage's context
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -438,6 +455,13 @@ class _MapPageState extends State<MapPage> {
         ..clear()
         ..addAll(filtered.map(_buildMarker));
     });
+  }
+
+  Future<void> _goToItemLocation(dynamic item) async {
+    if (item == null || item['location_lat'] == null || item['location_lng'] == null) return;
+    final latLng = LatLng(item['location_lat'] as double, item['location_lng'] as double);
+    final mapController = await _controller.future;
+    mapController.animateCamera(CameraUpdate.newLatLngZoom(latLng, 16));
   }
 
   Future<void> _goToCurrentLocation() async {
