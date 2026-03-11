@@ -30,12 +30,22 @@ void main() {
       expect(find.text('Report Item'), findsOneWidget);
     });
 
-    testWidgets('renders two TextFormFields (title and description)', (
+    // Form now has 3 TextFormFields: title, description, current location (found only,
+    // but default type is lost so only title + description are visible = 2)
+    testWidgets('renders two TextFormFields in lost mode (title and description)', (
       tester,
     ) async {
       await pumpForm(tester);
-      // Title + Description are TextFormFields.
+      // Default type is 'lost' — current location field is hidden, so only 2 fields
       expect(find.byType(TextFormField), findsNWidgets(2));
+    });
+
+    testWidgets('renders three TextFormFields in found mode', (tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.text('Found'));
+      await tester.pumpAndSettle();
+      // Found mode shows title + description + current location = 3
+      expect(find.byType(TextFormField), findsNWidgets(3));
     });
 
     testWidgets('renders the SegmentedButton type selector', (tester) async {
@@ -54,7 +64,6 @@ void main() {
       tester,
     ) async {
       await pumpForm(tester);
-      // Exact string from the source: _selectedType == 'lost' ? 'Date Lost *' : 'Date Found *'
       expect(find.text('Date Lost *'), findsOneWidget);
     });
 
@@ -73,7 +82,7 @@ void main() {
 
     testWidgets('accepts text entered into the title field', (tester) async {
       await pumpForm(tester);
-      // Title is the first TextFormField in the ListView.
+      // Title is always the first TextFormField
       await tester.enterText(
         find.byType(TextFormField).first,
         'My Lost Wallet',
@@ -86,7 +95,7 @@ void main() {
       tester,
     ) async {
       await pumpForm(tester);
-      // Description is the second (last) TextFormField.
+      // In lost mode there are exactly 2 TextFormFields: title (first) and description (last)
       await tester.enterText(
         find.byType(TextFormField).last,
         'Left on the bus',
@@ -105,7 +114,6 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
 
-      // need to make sure the button is visible before tapping otherwise it won't trigger the validation errors
       await tester.ensureVisible(find.byType(FilledButton));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(FilledButton));
@@ -113,7 +121,7 @@ void main() {
       await tester.drag(
         find.byType(Scrollable).first,
         const Offset(0, 1000),
-      ); // scroll to top to make sure the title error is visible
+      );
       await tester.pumpAndSettle();
       expect(find.text('Please enter a title'), findsOneWidget);
     });
@@ -146,7 +154,7 @@ void main() {
 
     testWidgets('Form accepts all valid inputs', (tester) async {
       await pumpForm(tester);
-      // Fill in title
+      // Fill in title (first TextFormField)
       await tester.enterText(find.byType(TextFormField).first, 'My Wallet');
       await tester.pumpAndSettle();
 
@@ -156,52 +164,72 @@ void main() {
       await tester.tap(find.text('Keys').last);
       await tester.pumpAndSettle();
 
-      // Fill in description
+      // Fill in description — in lost mode it is the second (last) TextFormField
       await tester.enterText(
-        find.byType(TextFormField).last,
+        find.byType(TextFormField).at(1),
         'Black leather wallet',
       );
       await tester.pumpAndSettle();
 
-      // All fields now have content
       expect(find.text('My Wallet'), findsOneWidget);
       expect(find.text('Black leather wallet'), findsOneWidget);
     });
 
-    testWidgets('Form has at least 3 TextFormFields', (tester) async {
+    testWidgets('Form has at least 2 TextFormFields', (tester) async {
       await pumpForm(tester);
-      // Count all TextFormFields (title, description, and any others)
       expect(find.byType(TextFormField), findsWidgets);
     });
 
-    testWidgets('renders location ListTile with location icon', (tester) async {
+    // Location card now shows 'Last Seen Location *' for lost, 'Location Found *' for found
+    testWidgets('renders location ListTile with "Last Seen Location *" in lost mode', (tester) async {
       await pumpForm(tester);
-      // Scroll to make sure the location widget is visible
       await tester.scrollUntilVisible(
-        find.text('Location'),
+        find.text('Last Seen Location *'),
         100,
         scrollable: find.byType(Scrollable).first,
       );
-      // Check for presence of the location text instead of relying on specific icon
-      expect(find.text('Location'), findsOneWidget);
+      expect(find.text('Last Seen Location *'), findsOneWidget);
     });
 
-    testWidgets('renders photo ListTile with camera icon', (tester) async {
+    testWidgets('renders location ListTile with "Location Found *" in found mode', (tester) async {
       await pumpForm(tester);
-      // Scroll to find Add Photo text
+      await tester.tap(find.text('Found'));
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
-        find.text('Add Photo'),
+        find.text('Location Found *'),
         100,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Add Photo'), findsOneWidget);
+      expect(find.text('Location Found *'), findsOneWidget);
+    });
+
+    // Photo card now shows 'Photo 1' (lost) or 'Photo 1 *' (found)
+    testWidgets('renders photo ListTile with "Photo 1" label in lost mode', (tester) async {
+      await pumpForm(tester);
+      await tester.scrollUntilVisible(
+        find.text('Photo 1'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Photo 1'), findsOneWidget);
+    });
+
+    testWidgets('renders photo ListTile with "Photo 1 *" label in found mode', (tester) async {
+      await pumpForm(tester);
+      await tester.tap(find.text('Found'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Photo 1 *'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Photo 1 *'), findsOneWidget);
     });
 
     testWidgets('renders FilledButton with label "Submit Report"', (
       tester,
     ) async {
       await pumpForm(tester);
-      // Scroll to make submit button visible
       await tester.scrollUntilVisible(
         find.byType(FilledButton),
         100,
@@ -223,16 +251,31 @@ void main() {
       expect(find.text('Tap to select date'), findsOneWidget);
     });
 
-    testWidgets('shows "Tap to select on map" as default location subtitle', (
+    // Location hint is now type-aware
+    testWidgets('shows correct default location hint in lost mode', (
       tester,
     ) async {
       await pumpForm(tester);
       await tester.scrollUntilVisible(
-        find.text('Tap to select on map'),
+        find.text('Tap to mark where it was last seen'),
         100,
         scrollable: find.byType(Scrollable).first,
       );
-      expect(find.text('Tap to select on map'), findsOneWidget);
+      expect(find.text('Tap to mark where it was last seen'), findsOneWidget);
+    });
+
+    testWidgets('shows correct default location hint in found mode', (
+      tester,
+    ) async {
+      await pumpForm(tester);
+      await tester.tap(find.text('Found'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Tap to mark where you found it'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Tap to mark where you found it'), findsOneWidget);
     });
 
     testWidgets('does not show CircularProgressIndicator on initial render', (
@@ -249,16 +292,15 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Verify form renders without errors
       expect(tester.takeException(), isNull);
 
-      // Verify form elements exist
       expect(find.byType(Form), findsOneWidget);
       expect(find.text('Report Item'), findsOneWidget);
       expect(find.text('Item Title *'), findsOneWidget);
       expect(find.text('Description *'), findsOneWidget);
       expect(find.text('Category *'), findsOneWidget);
     });
+
     testWidgets('Date picker opens when tapped', (WidgetTester tester) async {
       await tester.pumpWidget(
         MaterialApp(

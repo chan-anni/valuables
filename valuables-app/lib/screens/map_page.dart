@@ -4,8 +4,7 @@ import 'package:get_it/get_it.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:valuables/auth/auth_service.dart';
-import 'package:valuables/chat/chat_service.dart';
-import 'package:valuables/screens/chat_screen.dart';
+import 'package:valuables/claims/claims_sheet.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:valuables/theme_controller.dart';
 
@@ -16,9 +15,7 @@ class MapPage extends StatefulWidget {
   final String? notifItemId; 
   final bool fromNotification;
 
-  // For zooming into notifications location on tap , override the default map position and marker highlighting
   const MapPage({super.key, this.notifItemLat, this.notifItemLng, this.notifItemId, this.fromNotification = false}); 
-  
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -74,7 +71,7 @@ class _MapPageState extends State<MapPage> {
                 LatLng(widget.notifItemLat!, widget.notifItemLng!), 16),
             );
           }
-        }catch (e) {
+        } catch (e) {
           debugPrint('Error animating to notif: $e');
         }
       });
@@ -86,7 +83,6 @@ class _MapPageState extends State<MapPage> {
     supabaseInitializedNotifier.removeListener(_onSupabaseInitialized);
     super.dispose();
   }
-
 
   void _onSupabaseInitialized() {
     if (supabaseInitializedNotifier.value) {
@@ -106,7 +102,11 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadItems() async {
     if (!supabaseInitializedNotifier.value) return;
     try {
-      final data = await Supabase.instance.client.from('items').select().eq('type', 'found').eq('status', 'active'); // Only load found items for the map
+      final data = await Supabase.instance.client
+          .from('items')
+          .select()
+          .eq('type', 'found')
+          .eq('status', 'active');
       _allItems = List<Map<String, dynamic>>.from(data);
       if (widget.notifItemId != null) {
         _buildNotificationMarker();
@@ -133,7 +133,6 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  
   String _formatDate(DateTime date) {
     final diff = DateTime.now().difference(date);
     if (diff.inDays == 0) return 'Today';
@@ -156,9 +155,11 @@ class _MapPageState extends State<MapPage> {
     return Marker(
       markerId: MarkerId(item['id'].toString()),
       position: LatLng(item['location_lat'] as double, item['location_lng'] as double),
-      icon: isNotifItem? BitmapDescriptor.defaultMarker : BitmapDescriptor.defaultMarkerWithHue(
-        _categoryHues[category] ?? BitmapDescriptor.hueRed,
-      ),
+      icon: isNotifItem
+          ? BitmapDescriptor.defaultMarker
+          : BitmapDescriptor.defaultMarkerWithHue(
+              _categoryHues[category] ?? BitmapDescriptor.hueRed,
+            ),
       onTap: () {
         showModalBottomSheet(
           context: context,
@@ -167,10 +168,10 @@ class _MapPageState extends State<MapPage> {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
-          builder: (BuildContext context) {
-            final primary = Theme.of(context).colorScheme.primary;
-            final secondary = Theme.of(context).colorScheme.secondary;
-            final isDark = Theme.of(context).brightness == Brightness.dark;
+          builder: (BuildContext sheetContext) {
+            final primary = Theme.of(sheetContext).colorScheme.primary;
+            final secondary = Theme.of(sheetContext).colorScheme.secondary;
+            final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
             final isLost = itemType == 'LOST';
             final typeColor = isLost ? primary : secondary;
 
@@ -203,7 +204,7 @@ class _MapPageState extends State<MapPage> {
                           ? GestureDetector(
                               onTap: () {
                                 Navigator.push<void>(
-                                  context,
+                                  sheetContext,
                                   MaterialPageRoute(
                                     builder: (_) => Scaffold(
                                       backgroundColor: Colors.black,
@@ -213,16 +214,17 @@ class _MapPageState extends State<MapPage> {
                                         elevation: 0,
                                         leading: IconButton(
                                           icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                                          onPressed: () => Navigator.pop(context),
+                                          onPressed: () => Navigator.pop(sheetContext),
                                         ),
                                       ),
                                       body: Center(
                                         child: InteractiveViewer(
                                           minScale: 1.0,
                                           maxScale: 5.0,
-                                          child: Image.network(item['image_url'],
-                                          width: double.infinity,
-                                          fit: BoxFit.contain,
+                                          child: Image.network(
+                                            item['image_url'],
+                                            width: double.infinity,
+                                            fit: BoxFit.contain,
                                           ),
                                         ),
                                       ),
@@ -327,13 +329,18 @@ class _MapPageState extends State<MapPage> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 20),
-                      // Submit Claim button
+
+                      // "This is mine" claim button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: () => startClaim(item['id'].toString()),
-                          icon: const Icon(Icons.add),
-                          label: const Text('Submit Claim'),
+                          // Pass sheetContext so _openClaimSheet can pop the sheet correctly
+                          onPressed: () => _openClaimSheet(
+                            sheetContext: sheetContext,
+                            item: item,
+                          ),
+                          icon: const Icon(Icons.pan_tool_alt_outlined),
+                          label: const Text('This is mine'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             backgroundColor: primary,
@@ -354,8 +361,57 @@ class _MapPageState extends State<MapPage> {
       },
     );
   }
-  
-void _applyFilters() {
+
+  /// Opens the ClaimSheet bottom sheet.
+  /// [sheetContext] is the item detail sheet's own context — used to pop it first.
+  /// [context] (the MapPage context) is used to open the new claim sheet.
+  void _openClaimSheet({
+    required BuildContext sheetContext,
+    required Map<String, dynamic> item,
+  }) {
+    final finderId = item['user_id'] as String?;
+    if (finderId == null) {
+      ScaffoldMessenger.of(sheetContext).showSnackBar(
+        const SnackBar(content: Text('Could not identify the finder of this item.')),
+      );
+      return;
+    }
+
+    final currentUser = GetIt.I<AuthService>().getCurrentUserSession()?.user;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(sheetContext).showSnackBar(
+        const SnackBar(content: Text('Please sign in to claim an item.')),
+      );
+      return;
+    }
+
+    if (currentUser.id == finderId) {
+      ScaffoldMessenger.of(sheetContext).showSnackBar(
+        const SnackBar(content: Text('You cannot claim your own item.')),
+      );
+      return;
+    }
+
+    // Pop the item detail sheet using its own context
+    Navigator.pop(sheetContext);
+
+    // Open the claim sheet using MapPage's context
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => ClaimSheet(
+        itemId: item['id'].toString(),
+        finderId: finderId,
+        itemTitle: item['title'] as String? ?? 'Item',
+      ),
+    );
+  }
+
+  void _applyFilters() {
     final now = DateTime.now();
     final filtered = _allItems.where((item) {
       if (item['id'] == null ||
@@ -383,6 +439,7 @@ void _applyFilters() {
         ..addAll(filtered.map(_buildMarker));
     });
   }
+
   Future<void> _goToCurrentLocation() async {
     if (!mounted) return;
     setState(() => _isLoadingLocation = true);
@@ -392,9 +449,7 @@ void _applyFilters() {
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Location services are disabled. Please enable them.'),
-            ),
+            const SnackBar(content: Text('Location services are disabled. Please enable them.')),
           );
         }
         return;
@@ -410,9 +465,7 @@ void _applyFilters() {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'Location permission denied. Please change it in settings to use this feature.',
-              ),
+              content: Text('Location permission denied. Please change it in settings to use this feature.'),
             ),
           );
         }
@@ -434,56 +487,6 @@ void _applyFilters() {
     }
   }
 
-  Future<void> startClaim(String itemId) async {
-    final chatService = GetIt.I<ChatService>();
-    final authService = GetIt.I<AuthService>();
-    final supabase = Supabase.instance.client;
-
-    try {
-      // 1. Get the current user (The "Claimer")
-      final currentUser = authService.getCurrentUserSession()?.user;
-      if (currentUser == null) return;
-
-      // 2. Fetch the Item Holder's ID (The "Owner")
-      // We use .single() because we only expect one owner per item
-      final itemData = await supabase
-          .from("items")
-          .select("user_id, title")
-          .eq('id', itemId)
-          .single();
-
-      final String ownerId = itemData['user_id'];
-      final String itemTitle = itemData['title'];
-
-      // 3. Create the Room and get the new Room ID
-      // Note: I updated ChatService to return the room ID earlier
-      final room = await chatService.createRoom(
-        name: itemTitle,
-        itemId: itemId,
-      );
-      if (room == null) return;
-
-      final String roomId = room['id'];
-
-      // 4. Add both users to the room
-      // Assuming your addUsersToRoom now accepts a List of IDs or Users
-      await chatService.addUsersToRoom([currentUser.id, ownerId], roomId);
-
-      // 5. Navigate to the chat
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute<void>(
-            builder: (context) => ChatScreen(chatRoom: roomId),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint("Failed to start claim: $e");
-      // Show an error snackbar here if you like
-    }
-  }
-
   Widget _buildFilterBar() {
     final primary = Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -499,7 +502,6 @@ void _applyFilters() {
       left: 12,
       child: Row(
         children: [
-          // Category dropdown
           _dropdownButton(
             label: categoryLabel,
             active: categoryActive,
@@ -518,7 +520,6 @@ void _applyFilters() {
             ),
           ),
           const SizedBox(width: 8),
-          // Time dropdown
           _dropdownButton(
             label: timeLabel,
             active: timeActive,
@@ -611,12 +612,11 @@ void _applyFilters() {
                   markers: _markers,
                   onMapCreated: (GoogleMapController controller) {
                     if (!_controller.isCompleted) {
-                    _controller.complete(controller);
+                      _controller.complete(controller);
                     }
                   },
                 ),
                 if (!widget.fromNotification) _buildFilterBar(),
-                // Current location button
                 Positioned(
                   right: 12,
                   bottom: 100,

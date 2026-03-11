@@ -8,8 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatRoom;
+  final String? otherUserId; // optional — passed when navigating from a claim
 
-  const ChatScreen({super.key, required this.chatRoom});
+  const ChatScreen({super.key, required this.chatRoom, this.otherUserId});
 
   @override
   ChatScreenState createState() => ChatScreenState();
@@ -23,9 +24,10 @@ class ChatScreenState extends State<ChatScreen> {
   Map<String, dynamic>? room;
   Map<String, dynamic>? user;
   String? _itemImageUrl;
+  String? _otherUsername;
   final _supabase = Supabase.instance.client;
 
-  bool _isLoading = true; // Add a loading flag
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -45,7 +47,20 @@ class ChatScreenState extends State<ChatScreen> {
 
     final itemData = fetchedRoom['items'] as Map<String, dynamic>?;
 
-    // Load the chat history before updating the UI state
+    // Fetch the other person's username if their ID was passed in
+    if (widget.otherUserId != null) {
+      try {
+        final otherUser = await _supabase
+            .from('users')
+            .select('username')
+            .eq('id', widget.otherUserId!)
+            .single();
+        _otherUsername = otherUser['username'] as String?;
+      } catch (e) {
+        debugPrint('Could not fetch other user: $e');
+      }
+    }
+
     await _loadHistoricalMessages();
 
     setState(() {
@@ -68,7 +83,7 @@ class ChatScreenState extends State<ChatScreen> {
           .from('message')
           .select()
           .eq('chat_room_id', widget.chatRoom)
-          .order('created_at', ascending: true); // Chat UI loads bottom-up
+          .order('created_at', ascending: true);
 
       final List<dynamic> records = response as List<dynamic>;
 
@@ -83,28 +98,25 @@ class ChatScreenState extends State<ChatScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error loading history: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading history: $e')),
+        );
       }
     }
   }
 
   @override
   void dispose() {
-    _chatClient.disconnect(); // Clean up the Supabase subscription
+    _chatClient.disconnect();
     _chatController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show a loading spinner while fetching the user
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    debugPrint(_itemImageUrl);
 
     return Scaffold(
       appBar: AppBar(
@@ -121,9 +133,29 @@ class ChatScreenState extends State<ChatScreen> {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text(
-                room?['name'] ?? 'Chat',
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    room?['name'] ?? 'Chat',
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (_otherUsername != null)
+                    Text(
+                      'Chatting with: $_otherUsername',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.normal,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
               ),
             ),
           ],
@@ -133,7 +165,7 @@ class ChatScreenState extends State<ChatScreen> {
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'delete') {
-                _confirmDelete(context, room!['id']); // Call your delete logic
+                _confirmDelete(context, room!['id']);
               }
             },
             itemBuilder: (BuildContext context) => [
@@ -156,10 +188,22 @@ class ChatScreenState extends State<ChatScreen> {
       ),
       body: Chat(
         chatController: _chatController,
-        currentUserId: user!['id'], // Bracket notation
+        currentUserId: user!['id'],
         onMessageSend: (text) => _handleSend(text),
         resolveUser: (chat_core.UserID id) async {
-          return chat_core.User(id: id, name: user!["id"]);
+          try {
+            final result = await _supabase
+                .from('users')
+                .select('id, username')
+                .eq('id', id)
+                .single();
+            return chat_core.User(
+              id: id,
+              name: result['username'] as String? ?? 'Unknown',
+            );
+          } catch (_) {
+            return chat_core.User(id: id, name: 'Unknown');
+          }
         },
       ),
     );
@@ -170,18 +214,17 @@ class ChatScreenState extends State<ChatScreen> {
 
     final newMessage = chat_core.TextMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      authorId: user!['id'], // Bracket notation
+      authorId: user!['id'],
       createdAt: DateTime.now().toUtc(),
       text: text,
     );
 
     _chatController.insertMessage(newMessage);
-
     await _chatClient.sendMessage(roomId: widget.chatRoom, text: text);
   }
 
   void _handleIncomingMessage(Map<String, dynamic> record) {
-    if (record['author_id'] == user!['id']) return; // Bracket notation
+    if (record['author_id'] == user!['id']) return;
 
     final incomingMessage = chat_core.TextMessage(
       id: record['id'].toString(),
@@ -203,19 +246,17 @@ class ChatScreenState extends State<ChatScreen> {
           title: const Text('Delete Conversation?'),
           content: const Text('Are you sure you want to delete this chat?'),
           actions: [
-            // 1. The Cancel Button
             TextButton(
-              onPressed: () => Navigator.pop(context), // Just closes the pop-up
+              onPressed: () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
-            // 2. The Delete Button
             TextButton(
               onPressed: () async {
                 final navigator = Navigator.of(context);
                 await _chatService.deleteRoom(roomId: roomId);
                 if (mounted) {
-                  navigator.pop(); // Closes the dialog
-                  navigator.pop(); // Leaves the chat screen
+                  navigator.pop();
+                  navigator.pop();
                 }
               },
               child: const Text('Delete', style: TextStyle(color: Colors.red)),
