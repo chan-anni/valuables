@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'local_notifs.dart';
+import 'package:valuables/notifs/local_notifs.dart';
 
 
 class MatchService {
